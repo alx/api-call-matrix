@@ -1,4 +1,4 @@
-baseURL: https://example.org/
+baseURL: https://alx.github.io/api-call-matrix/
 languageCode: en-us
-title: My New Hugo Site
+title: API Call Matrix
 theme: ["PaperMod"]

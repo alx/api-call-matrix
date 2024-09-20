@@ -24,7 +24,7 @@ def create_org_file():
         org_file.write(org_content.strip())
 
 # Function to create an Org-mode file for each prompt result
-def append_prompt_org_file(prompt_index, source_file, prompt_data, result_image_paths):
+def append_prompt_org_file(prompt_index, prompt_data, result_image_paths):
     # Extract required data for the org file
     prompt_title = prompt_data["prompt"]
     sd_model_checkpoint = prompt_data["override_settings"]["sd_model_checkpoint"]
@@ -34,19 +34,21 @@ def append_prompt_org_file(prompt_index, source_file, prompt_data, result_image_
     org_file_path = os.path.join(f"content", org_file_name)
 
     # Prepare the content of the org file
-    images_list = '\n'.join([f'[[file:{image_path}]]' for image_path in result_image_paths])
+    images_list = '\n'.join([f'[[{image_path.replace('./static/', '')}]]' for image_path in result_image_paths])
+
+    # clean base64 images
+    for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
+        control["image"] = "base64_im_placeholder"
 
     org_content = f"""
 
 * prompt_{prompt_index} {prompt_title[:50]} :@{sd_model_checkpoint}:
 
-[[file:{source_file}]]
-
 {images_list}
 
-#+begin_src json
-{prompt_data}
-#+end_src
+#+BEGIN_SRC json
+{json.dumps(prompt_data, indent=4)}
+#+END_SRC
 
     """
     # TODO Show controlnets
@@ -73,11 +75,11 @@ api_url = 'http://127.0.0.1:7860/sdapi/v1/txt2img'
 date_today = datetime.now().strftime('%Y%m%d')
 
 # Ensure the base directory for saving images exists
-base_dir = './assets/img/results/'
+base_dir = './static/img/results/'
 os.makedirs(base_dir, exist_ok=True)
 
 # Load and list all files in the source_files directory
-source_files_dir = './assets/img/source_files/'
+source_files_dir = './static/img/source_files/'
 source_files = [os.path.join(source_files_dir, file) for file in os.listdir(source_files_dir) if os.path.isfile(os.path.join(source_files_dir, file))]
 
 # Check if there are fewer source files than prompts
@@ -128,4 +130,4 @@ for prompt_index, prompt_data in enumerate(prompts):
             print(f"Failed to get image for title {title}. HTTP Status Code: {response.status_code}")
 
     # Create an Org-mode file with the list of result images
-    append_prompt_org_file(prompt_index, source_file, prompt_data, result_image_paths)
+    append_prompt_org_file(prompt_index, prompt_data, result_image_paths)
