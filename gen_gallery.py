@@ -2,8 +2,22 @@
 import json
 import os
 import base64
-import requests
 from datetime import datetime
+
+#
+# TODO fix: No module named 'request'
+# (api-call-matrix) alx@slim:~/code/api-call-matrix$ python3 gen_gallery.py
+# Traceback (most recent call last):
+#   File "/home/alx/code/api-call-matrix/gen_gallery.py", line 4, in <module>
+#     import requests
+# ModuleNotFoundError: No module named 'requests'
+#
+# Probable cause: uv install
+#
+# Temp fix: append /usr/lib dist-packages
+import sys
+sys.path.append("/usr/lib/python3/dist-packages")
+import requests
 
 # Function to convert an image to base64
 def image_to_base64(image_path):
@@ -24,7 +38,7 @@ def create_org_file():
         org_file.write(org_content.strip())
 
 # Function to create an Org-mode file for each prompt result
-def append_prompt_org_file(prompt_index, prompt_data, result_image_paths):
+def append_prompt_org_file(prompt_data, result_image_paths):
     # Extract required data for the org file
     prompt_title = prompt_data["prompt"]
     sd_model_checkpoint = prompt_data["override_settings"]["sd_model_checkpoint"]
@@ -34,15 +48,17 @@ def append_prompt_org_file(prompt_index, prompt_data, result_image_paths):
     org_file_path = os.path.join(f"content", org_file_name)
 
     # Prepare the content of the org file
-    images_list = '\n'.join([f'[[{image_path.replace('./static/', '')}]]' for image_path in result_image_paths])
+    image_paths = [image_path.replace("./static/", "") for image_path in result_image_paths]
+    images_list = '\n'.join([f'[[{img_path}]]' for img_path in image_paths])
 
-    # clean base64 images
-    for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
+    controlnet_args = prompt_data["alwayson_scripts"]["ControlNet"]["args"];
+    for control in controlnet_args:
+        # clean base64 images
         control["image"] = "base64_im_placeholder"
 
     org_content = f"""
 
-* prompt_{prompt_index} {prompt_title[:50]} :@{sd_model_checkpoint}:
+* {prompt_data['slug_id']}  :@{sd_model_checkpoint}:
 
 {images_list}
 
@@ -98,9 +114,9 @@ for prompt_index, prompt_data in enumerate(prompts):
         source_basename = os.path.basename(source_file).split('.')[0]
 
         # Set the image path where the result will be saved, using the source file basename
-        image_dir = os.path.join(base_dir, f"prompt_{prompt_index}")
+        image_dir = os.path.join(base_dir, prompt_data["slug_id"])
         os.makedirs(image_dir, exist_ok=True)
-        image_path = os.path.join(image_dir, f"result_{prompt_index}_{source_basename}.png")
+        image_path = os.path.join(image_dir, f"{source_basename}.png")
 
         # Check if the image already exists, if yes, skip the HTTP POST request
         if os.path.exists(image_path):
@@ -130,4 +146,4 @@ for prompt_index, prompt_data in enumerate(prompts):
             print(f"Failed to get image for title {title}. HTTP Status Code: {response.status_code}")
 
     # Create an Org-mode file with the list of result images
-    append_prompt_org_file(prompt_index, prompt_data, result_image_paths)
+    append_prompt_org_file(prompt_data, result_image_paths)

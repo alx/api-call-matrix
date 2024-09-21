@@ -1,11 +1,228 @@
-* prompt_0 (esoteric magicians:1.1) on an (exoplanet:1.1) poi :@sd_xl_base_1.0_0.9vae:
+* best-marathon-sunrise-beach  :@sd_xl_base_1.0_0.9vae:
 
-[[img/results/prompt_0/result_0_signal-512.png]]
-[[img/results/prompt_0/result_0_signal-2024-09-19-duo_far.png]]
-[[img/results/prompt_0/result_0_signal-2024-09-19-duo.png]]
+
 
 #+BEGIN_SRC json
 {
+    "slug_id": "best-marathon-sunrise-beach",
+    "prompt": "marathon, sunrise, beach, thailand, traditional Buddhist art style painting,Thai art of a beautiful woman, (Arati:1.1), <lora:sd_xl_turbo_lora_v1:1>",
+    "negative_prompt": "text, bad art, blurry, watermark, person, tripod, letters, ugly, deformed, glasses",
+    "send_images": true,
+    "save_images": true,
+    "width": 1024,
+    "height": 1024,
+    "steps": 10,
+    "sampler_name": "LCM",
+    "cfg_scale": 1.7,
+    "override_settings": {
+        "sd_model_checkpoint": "sd_xl_base_1.0_0.9vae",
+        "sd_checkpoint_hash": "62b2a03e85"
+    },
+    "alwayson_scripts": {
+        "Sampler": {
+            "args": [
+                10,
+                "LCM",
+                "Automatic"
+            ]
+        },
+        "ControlNet": {
+            "args": [
+                {
+                    "batch_image_dir": "",
+                    "batch_input_gallery": null,
+                    "batch_mask_dir": "",
+                    "batch_mask_gallery": null,
+                    "control_mode": "Balanced",
+                    "enabled": true,
+                    "guidance_end": 1.0,
+                    "guidance_start": 0.0,
+                    "hr_option": "Both",
+                    "image": "base64_im_placeholder",
+                    "mask_image": null,
+                    "mask_image_fg": null,
+                    "model": "control-lora-canny-rank128 [c910cde9]",
+                    "module": "canny",
+                    "pixel_perfect": false,
+                    "processor_res": 512,
+                    "resize_mode": "Crop and Resize",
+                    "save_detected_map": true,
+                    "threshold_a": 30,
+                    "threshold_b": 158,
+                    "use_preview_as_input": false,
+                    "weight": 1.2
+                },
+                {
+                    "batch_image_dir": "",
+                    "batch_input_gallery": null,
+                    "batch_mask_dir": "",
+                    "batch_mask_gallery": null,
+                    "control_mode": "Balanced",
+                    "enabled": true,
+                    "guidance_end": 1.0,
+                    "guidance_start": 0.0,
+                    "hr_option": "Both",
+                    "image": "base64_im_placeholder",
+                    "mask_image": null,
+                    "mask_image_fg": null,
+                    "model": "thibaud_xl_openpose_256lora [14288071]",
+                    "module": "openpose_full",
+                    "pixel_perfect": false,
+                    "processor_res": 512,
+                    "resize_mode": "Crop and Resize",
+                    "save_detected_map": true,
+                    "threshold_a": 0.5,
+                    "threshold_b": 0.5,
+                    "use_preview_as_input": false,
+                    "weight": 1
+                },
+                {
+                    "batch_image_dir": "",
+                    "batch_input_gallery": null,
+                    "batch_mask_dir": "",
+                    "batch_mask_gallery": null,
+                    "control_mode": "Balanced",
+                    "enabled": true,
+                    "generated_image": null,
+                    "guidance_end": 1.0,
+                    "guidance_start": 0.0,
+                    "hr_option": "Both",
+                    "image": "base64_im_placeholder",
+                    "mask_image": null,
+                    "mask_image_fg": null,
+                    "model": "instantIDSDXL_ipAdapterInstantId [eb2d3ec0]",
+                    "module": "InsightFace (InstantID)",
+                    "pixel_perfect": false,
+                    "processor_res": 0.5,
+                    "resize_mode": "Crop and Resize",
+                    "save_detected_map": true,
+                    "threshold_a": 0.5,
+                    "threshold_b": 0.5,
+                    "use_preview_as_input": false,
+                    "weight": 1.2
+                }
+            ]
+        }
+    }
+}
+#+END_SRC* best-marathon-moment-sunrise-beach  :@sd_xl_base_1.0_0.9vae:
+
+[[img/results/best-marathon-moment-sunrise-beach/signal-2024-09-19-duo.png]]
+[[img/results/best-marathon-moment-sunrise-beach/signal-512.png]]
+[[img/results/best-marathon-moment-sunrise-beach/signal-2024-09-19-duo_far.png]]
+
+#+BEGIN_SRC json
+{
+    "slug_id": "best-marathon-moment-sunrise-beach",
+    "prompt": "best marathon moment, sunrise, beachy colors, <lora:sd_xl_turbo_lora_v1:1>, (Thawan Duchanee style:1.3)",
+    "negative_prompt": "text, bad art, blurry, watermark, person, tripod, letters, ugly, deformed, glasses",
+    "send_images": true,
+    "save_images": true,
+    "width": 1024,
+    "height": 1024,
+    "steps": 10,
+    "sampler_name": "LCM",
+    "cfg_scale": 1.7,
+    "override_settings": {
+        "sd_model_checkpoint": "sd_xl_base_1.0_0.9vae",
+        "sd_checkpoint_hash": "62b2a03e85"
+    },
+    "alwayson_scripts": {
+        "Sampler": {
+            "args": [
+                10,
+                "LCM",
+                "Automatic"
+            ]
+        },
+        "ControlNet": {
+            "args": [
+                {
+                    "batch_image_dir": "",
+                    "batch_input_gallery": null,
+                    "batch_mask_dir": "",
+                    "batch_mask_gallery": null,
+                    "control_mode": "Balanced",
+                    "enabled": true,
+                    "guidance_end": 1.0,
+                    "guidance_start": 0.0,
+                    "hr_option": "Both",
+                    "image": "base64_im_placeholder",
+                    "mask_image": null,
+                    "mask_image_fg": null,
+                    "model": "control-lora-canny-rank128 [c910cde9]",
+                    "module": "canny",
+                    "pixel_perfect": false,
+                    "processor_res": 512,
+                    "resize_mode": "Crop and Resize",
+                    "save_detected_map": true,
+                    "threshold_a": 30,
+                    "threshold_b": 158,
+                    "use_preview_as_input": false,
+                    "weight": 1.2
+                },
+                {
+                    "batch_image_dir": "",
+                    "batch_input_gallery": null,
+                    "batch_mask_dir": "",
+                    "batch_mask_gallery": null,
+                    "control_mode": "Balanced",
+                    "enabled": true,
+                    "guidance_end": 1.0,
+                    "guidance_start": 0.0,
+                    "hr_option": "Both",
+                    "image": "base64_im_placeholder",
+                    "mask_image": null,
+                    "mask_image_fg": null,
+                    "model": "thibaud_xl_openpose_256lora [14288071]",
+                    "module": "openpose_full",
+                    "pixel_perfect": false,
+                    "processor_res": 512,
+                    "resize_mode": "Crop and Resize",
+                    "save_detected_map": true,
+                    "threshold_a": 0.5,
+                    "threshold_b": 0.5,
+                    "use_preview_as_input": false,
+                    "weight": 1
+                },
+                {
+                    "batch_image_dir": "",
+                    "batch_input_gallery": null,
+                    "batch_mask_dir": "",
+                    "batch_mask_gallery": null,
+                    "control_mode": "Balanced",
+                    "enabled": true,
+                    "generated_image": null,
+                    "guidance_end": 1.0,
+                    "guidance_start": 0.0,
+                    "hr_option": "Both",
+                    "image": "base64_im_placeholder",
+                    "mask_image": null,
+                    "mask_image_fg": null,
+                    "model": "instantIDSDXL_ipAdapterInstantId [eb2d3ec0]",
+                    "module": "InsightFace (InstantID)",
+                    "pixel_perfect": false,
+                    "processor_res": 0.5,
+                    "resize_mode": "Crop and Resize",
+                    "save_detected_map": true,
+                    "threshold_a": 0.5,
+                    "threshold_b": 0.5,
+                    "use_preview_as_input": false,
+                    "weight": 1.2
+                }
+            ]
+        }
+    }
+}
+#+END_SRC* magicians-sunrise-beach  :@sd_xl_base_1.0_0.9vae:
+
+[[img/results/magicians-sunrise-beach/signal-2024-09-19-duo.png]]
+[[img/results/magicians-sunrise-beach/signal-512.png]]
+[[img/results/magicians-sunrise-beach/signal-2024-09-19-duo_far.png]]
+
+#+BEGIN_SRC json
+{
+    "slug_id": "magicians-sunrise-beach",
     "prompt": "(esoteric magicians:1.1) on an (exoplanet:1.1) point of view during sunrise, simple outlined illustration, beachy colors, <lora:sd_xl_turbo_lora_v1:1>, (dali style:1.3)",
     "negative_prompt": "text, bad art, blurry, watermark, person, tripod, letters, ugly, deformed, glasses",
     "send_images": true,
