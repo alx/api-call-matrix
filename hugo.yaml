@@ -1,4 +1,4 @@
-baseURL: https://alx.github.io/api-call-matrix/
+baseURL: http://api-call-matrix/
 languageCode: en-us
 title: API Call Matrix
 theme: ["PaperMod"]
