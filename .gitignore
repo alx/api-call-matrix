@@ -2,5 +2,6 @@ config.json
 .hugo_build.lock
 .packages/
 public/
+content/*.org
 static/img/source_files/*
 static/img/results/*
