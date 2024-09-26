@@ -28,7 +28,7 @@ with open('config.json', 'r') as file:
 prompts = config["prompts"]
 
 # SD params
-sd_params = config["sd_params"]
+sd_runs = config["runs"]
 
 # Set the API URL
 api_url = 'http://127.0.0.1:7860/sdapi/v1/txt2img'
@@ -50,72 +50,107 @@ if len(source_files) == 0:
 
 base64_placeholder = "base64_img_placeholder"
 
-# Function to create an Org-mode file for each prompt result
-def create_org_file():
-    # Create a valid file name by replacing spaces and special characters
-    org_file_name = f"_index.org"
-    org_file_path = os.path.join(f"content", org_file_name)
+index_filename = f"_index.html"
+index_path = os.path.join(f"content", index_filename)
 
-    org_content = f"""
-    """
+# Function to create an content file
+def init_content():
 
-    # Write the content to the Org-mode file
-    with open(org_file_path, "w") as org_file:
-        org_file.write(org_content.strip())
+    index_content = (
+    )
 
+    # Write the content to the content file
+    with open(index_path, "w+") as f:
+        f.writelines(index_content)
 
-# Function to create an Org-mode file for each prompt result
-def append_prompt_org_file(prompt_data, result_image_paths):
-    # Extract required data for the org file
+def append_run_to_content(run_data):
+
+    slug = run_data['run_slug_id']
+    sd_params = run_data["params"]
+    sd_model_checkpoint = sd_params["override_settings"]["sd_model_checkpoint"]
+
+    categories = [
+        sd_model_checkpoint
+    ]
+
+    controlnet_args = sd_params["alwayson_scripts"]["ControlNet"]["args"];
+    for control in controlnet_args:
+        categories.append(control['module'])
+        # clean base64 images
+        control["image"] = base64_placeholder
+
+    badges = "</span><span class='badge text-bg-secondary'>".join(categories)
+
+    content = (
+        f'<h1>{slug} <span class="badge text-bg-secondary">{badges}</span></h1>'
+        f'<p class="d-inline-flex gap-1">'
+        f'<a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapse">'
+        f'SD Params'
+        f'</a>'
+        f'<div class="collapse" id="collapseExample">'
+        f'<pre><code>'
+        f'{json.dumps(sd_params, indent=4)}'
+        f'</code></pre></div>'
+    )
+
+    # Write the content to the content file
+    with open(index_path, "a+") as f:
+        f.writelines(content)
+
+# Function to create an content file for each prompt result
+def append_prompt_to_content(prompt_data, result_image_paths):
+
+    # Extract required data
     prompt_title = prompt_data["prompt"]
-    sd_model_checkpoint = prompt_data["override_settings"]["sd_model_checkpoint"]
-
-    # Create a valid file name by replacing spaces and special characters
-    org_file_name = f"_index.org"
-    org_file_path = os.path.join(f"content", org_file_name)
 
     # Prepare the content of the org file
     image_paths = [image_path.replace("./static/", "") for image_path in result_image_paths]
-    images_list = '\n'.join([f'[[{img_path}]]' for img_path in image_paths])
+    images_list = '\n'.join(
+        [(
+            f'<a href={img_path} '
+            f'class="text-decoration-none shadow-none p-2" '
+            f'data-pswp-width="{prompt_data["width"]}" '
+            f'data-pswp-height="{prompt_data["height"]}" '
+            f'target="_blank">'
+            f'<img src="{img_path}" alt="{os.path.basename(img_path)}">'
+            f'</a>'
+            ) for img_path in image_paths]
+
+    )
 
     controlnet_args = prompt_data["alwayson_scripts"]["ControlNet"]["args"];
     for control in controlnet_args:
         # clean base64 images
         control["image"] = base64_placeholder
 
-    org_content = f"""
-
-* {prompt_data['slug_id']}  :@{sd_model_checkpoint}:
-
-{images_list}
-
-#+BEGIN_SRC json
-{json.dumps(prompt_data, indent=4)}
-#+END_SRC
-
-    """
-    # TODO Show controlnets
+    content = (
+        f'<h2>{prompt_data["slug_id"]}</h2>'
+        f'<div class="pswp-gallery pswp-gallery--single-column list-group list-group-horizontal">'
+        f'{images_list}'
+        f'</div>'
+    )
 
     # Write the content to the Org-mode file
-    with open(org_file_path, "a") as org_file:
-        org_file.write(org_content.strip())
+    with open(index_path, "a+") as f:
+        f.writelines(content)
 
-    print(f"Org file saved to: {org_file_path}")
-
-create_org_file()
+# init content
+init_content()
 
 # For each sd params, use multiple params
-for sd_param in sd_params:
+for sd_run in sd_runs:
 
-    # Set the sd_param path where the result will be saved, using the source file basename
-    sd_param_dir = os.path.join(base_dir, sd_param["params_slug_id"])
+    # Set the sd_run path where the result will be saved, using the source file basename
+    sd_param_dir = os.path.join(base_dir, sd_run["run_slug_id"])
     os.makedirs(sd_param_dir, exist_ok=True)
+
+    append_run_to_content(sd_run)
 
     # Iterate through the prompts and corresponding source files, and make the POST request
     for prompt_index, prompt_data in enumerate(prompts):
 
-        # populate prompt_data with sd_param
-        prompt_data = prompt_data | sd_param["params"]
+        # merge prompt_data with sd_run
+        prompt_data = prompt_data | sd_run["params"]
         prompt_data["prompt"] = prompt_data["positive"]
         prompt_data["negative_prompt"] = prompt_data["negative"]
 
@@ -142,5 +177,5 @@ for sd_param in sd_params:
 
             result_image_paths.append(image_path)
 
-        # Create an Org-mode file with the list of result images
-        append_prompt_org_file(prompt_data, result_image_paths)
+        # Create content with the list of result images
+        append_prompt_to_content(prompt_data, result_image_paths)

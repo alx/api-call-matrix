@@ -4,7 +4,6 @@ import os
 import base64
 from datetime import datetime
 
-#
 # TODO fix: No module named 'request'
 # (api-call-matrix) alx@slim:~/code/api-call-matrix$ python3 gen_gallery.py
 # Traceback (most recent call last):
@@ -17,6 +16,7 @@ from datetime import datetime
 # Temp fix: append /usr/lib dist-packages
 import sys
 sys.path.append("/usr/lib/python3/dist-packages")
+
 import requests
 
 # Load JSON config from config.json
@@ -26,8 +26,8 @@ with open('config.json', 'r') as file:
 # Extract the prompts from the JSON array
 prompts = config["prompts"]
 
-# SD params
-sd_params = config["sd_params"]
+# SD runs
+sd_runs = config["runs"]
 
 # Set the API URL
 api_url = 'http://127.0.0.1:7860/sdapi/v1/txt2img'
@@ -55,21 +55,25 @@ def image_to_base64(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 # For each sd params, use multiple params
-for sd_param in sd_params:
+for sd_run in sd_runs:
 
-    # Set the sd_param path where the result will be saved, using the source file basename
-    sd_param_dir = os.path.join(base_dir, sd_param["params_slug_id"])
-    os.makedirs(sd_param_dir, exist_ok=True)
+    # Set the sd_run path where the result will be saved, using the source file basename
+    sd_run_dir = os.path.join(base_dir, sd_run["run_slug_id"])
+    os.makedirs(sd_run_dir, exist_ok=True)
 
     # Iterate through the prompts and corresponding source files, and make the POST request
     for prompt_index, prompt_data in enumerate(prompts):
 
-        # populate prompt_data with sd_param
-        prompt_data = prompt_data | sd_param["params"]
+        # populate prompt_data with sd_run
+        prompt_data = prompt_data | sd_run["params"]
         prompt_data["prompt"] = prompt_data["positive"]
+
+        if "append_prompt" in sd_run["params"]:
+            prompt_data["prompt"] += sd_run["params"]["append_prompt"]
+
         prompt_data["negative_prompt"] = prompt_data["negative"]
 
-        image_dir = os.path.join(sd_param_dir, prompt_data["slug_id"])
+        image_dir = os.path.join(sd_run_dir, prompt_data["slug_id"])
         os.makedirs(image_dir, exist_ok=True)
 
         # Save the request as json
@@ -93,7 +97,8 @@ for sd_param in sd_params:
             result_image_paths.append(image_path)
 
             # Check if the image already exists, if yes, skip the HTTP POST request
-            if os.path.exists(image_path) or not is_requesting_images:
+            is_forced = "force" in prompt_data and prompt_data["force"]
+            if not is_forced and os.path.exists(image_path):
                 print(f"Image already exists: {image_path}. Skipping POST request.")
                 continue
 
