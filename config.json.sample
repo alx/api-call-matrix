@@ -3,14 +3,16 @@
         {
 
             "slug_id": "best-marathon-sunrise-beach",
-            "positive": "marathon, sunrise, beach, thailand, traditional Buddhist art style painting,Thai art of a beautiful woman, (Arati:1.1), <lora:sd_xl_turbo_lora_v1:1>"
+            "positive": "professional 3d model of <lora:Spider-Man:1.2> Spider-Man, sunrise, beach, thailand, traditional Buddhist art style painting,Thai art"
         }
     ],
     "runs": [
         {
             "run_slug_id": "sdxl_fast_lcm_canny_openpose_instantid",
+            "status": "COMPLETE",
             "params": {
 
+                "append_prompt": ", <lora:sd_xl_turbo_lora_v1:1>",
                 "negative": "text, bad art, blurry, watermark, person, tripod, letters, ugly, deformed, glasses",
 
                 "send_images": true,
