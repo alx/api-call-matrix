@@ -149,6 +149,12 @@ for sd_run in sd_runs:
     # Iterate through the prompts and corresponding source files, and make the POST request
     for prompt_index, prompt_data in enumerate(prompts):
 
+        if (
+                "limit_slug_prompts" in sd_run
+                and prompt_data["slug_id"] not in sd_run["limit_slug_prompts"]
+        ):
+            continue;
+
         # merge prompt_data with sd_run
         prompt_data = prompt_data | sd_run["params"]
         prompt_data["prompt"] = prompt_data["positive"]
