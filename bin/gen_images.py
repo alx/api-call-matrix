@@ -161,9 +161,9 @@ def process_sd_run(
         if "negative" in prompt_data:
             prompt_data["negative_prompt"] = prompt_data["negative"]
         if "negative" in sd_run:
-            prompt_data["prompt"] += sd_run["negative"]
+            prompt_data["negative_prompt"] += sd_run["negative"]
         if len(top_level_negative) > 0:
-            prompt_data["prompt"] += top_level_negative
+            prompt_data["negative_prompt"] += top_level_negative
 
         # create output folder
         output_dir = os.path.join(sd_param_dir, prompt_data["slug_id"])

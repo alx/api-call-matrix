@@ -59,22 +59,30 @@ def sd_run_to_content(sd_run):
     for control_index, control_data in enumerate(controlnet_args):
         categories.append(control_data['module'])
 
-        if config["save_json"]:
+        if (
+                config["save_json"]
+                and "image" in control_data
+        ):
             # replace base64 image by placeholder
-            sd_params["alwayson_scripts"]["ControlNet"]["args"][control_index] = \
-                config["base64_placeholder"]
+            control_data["image"] = config["base64_placeholder"]
 
-    badges = "</span><span class='badge text-bg-secondary'>".join(categories)
+    badges = [
+        f"<span class='badge rounded-pill text-bg-secondary'>{c}</span>"
+        for c in categories
+        ]
 
-    content = f'<h1>{slug} <span class="badge text-bg-secondary">{badges}</span></h1>'
+    content = (
+        f'<h1>{slug}</h1>'
+        f'<p>{"".join(badges)}</p>'
+    )
 
     if config["save_json"]:
         content += (
             f'<p class="d-inline-flex gap-1">'
-            f'<a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapse">'
+            f'<a class="btn btn-primary" data-bs-toggle="collapse" href="#collapse{slug}" role="button" aria-expanded="false" aria-controls="collapse">'
             f'SD Params'
             f'</a>'
-            f'<div class="collapse" id="collapseExample">'
+            f'<div class="collapse" id="collapse{slug}">'
             f'<pre><code>'
             f'{json.dumps(sd_params, indent=4)}'
             f'</code></pre></div>'
@@ -102,23 +110,30 @@ def prompt_to_content(prompt_data, result_output_paths):
         for image_path in result_output_paths
     ]
 
-    images_list = '\n'.join(
-        [(
+    images_list = []
+    for img_path in image_paths:
+        json_path = img_path.replace(".png", ".json")
+        images_list.append(
+            f'<div class="card w-25 m-2">'
             f'<a href={img_path} '
-            f'class="text-decoration-none shadow-none p-2" '
+            f'class="gen_img text-decoration-none shadow-none p-2" '
             f'data-pswp-width="{prompt_data["width"]}" '
             f'data-pswp-height="{prompt_data["height"]}" '
             f'target="_blank">'
             f'<img src="{img_path}" alt="{os.path.basename(img_path)}">'
             f'</a>'
-            ) for img_path in image_paths]
-
-    )
+            f'<div class="card-body">'
+            f'<div class="card-text">'
+            f'<a href="{json_path}" target="_blank">json</a>'
+            f'</div>'
+            f'</div>'
+            f'</div>'
+        )
 
     content = (
         f'<h2>{prompt_data["slug_id"]}</h2>'
         f'<div class="pswp-gallery pswp-gallery--single-column list-group list-group-horizontal">'
-        f'{images_list}'
+        f'{"".join(images_list)}'
         f'</div>'
     )
 
@@ -188,12 +203,7 @@ def process_sd_run(
     # Iterate through the prompts and corresponding source files, and make the POST request
     for prompt_index, prompt_data in enumerate(prompts):
 
-        # Do not process this prompt if excluded from sd_run params
-        if (
-                "limit_slug_prompts" in sd_run
-                and prompt_data["slug_id"] not in sd_run["limit_slug_prompts"]
-        ):
-            continue;
+        print(f"✔ gen_content - prompt - {prompt_data['slug_id']}")
 
         # populate prompt_data with sd_run
         prompt_data = prompt_data | sd_run["params"]
@@ -211,9 +221,9 @@ def process_sd_run(
         if "negative" in prompt_data:
             prompt_data["negative_prompt"] = prompt_data["negative"]
         if "negative" in sd_run:
-            prompt_data["prompt"] += sd_run["negative"]
+            prompt_data["negative_prompt"] += sd_run["negative"]
         if len(top_level_negative) > 0:
-            prompt_data["prompt"] += top_level_negative
+            prompt_data["negative_prompt"] += top_level_negative
 
         # create output folder
         output_dir = os.path.join(sd_param_dir, prompt_data["slug_id"])
@@ -267,7 +277,9 @@ def main():
         # Start runs
         for sd_run in enabled_runs:
 
-            content = process_sd_run(
+            print(f"✔ gen_content - sd_run - {sd_run['slug_id']}")
+
+            content += process_sd_run(
                 sd_run,
                 enabled_prompts,
                 config["positive"],
@@ -283,7 +295,7 @@ def main():
         with open(content_path(), "w+") as f:
             f.writelines(content)
 
-        print("✔ gen_content DONE")
+        print(f"✔ gen_content DONE")
 
 if __name__ == "__main__":
     main()
