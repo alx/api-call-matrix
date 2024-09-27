@@ -256,12 +256,12 @@ def main():
 
         enabled_runs = [
             r for r in config["runs"]
-            if r["enable"]
+            if r["enabled"]
         ]
 
         enabled_prompts = [
             p for p in config["prompts"]
-            if p["enable"]
+            if p["enabled"]
         ]
 
         # Start runs

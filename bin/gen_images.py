@@ -25,7 +25,10 @@ def image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def process_prompt(prompt_data, output_dir):
+def process_prompt(
+        prompt_data,
+        output_dir,
+):
 
     config = load_config()
 
@@ -69,9 +72,8 @@ def process_prompt(prompt_data, output_dir):
 
         # Check if the image already exists
         # if yes: skip the HTTP POST request
-        is_forced = "force" in prompt_data and prompt_data["force"]
-        if not is_forced and os.path.exists(image_path):
-            print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename}")
+        if os.path.exists(image_path):
+            print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename} - exists")
             continue
 
         # Convert the source file to base64
@@ -135,7 +137,6 @@ def process_sd_run(
     if "results_root" not in config:
         raise KeyError(f"❌ results_root not found in config file: {config_filepath}")
 
-    print(f"▶ sd_run - [0/{len(prompts)}] - {sd_run['slug_id']}")
 
     # Set the sd_run path where the result will be saved,
     # using the sd_run slug id
@@ -195,16 +196,17 @@ def main():
 
         enabled_runs = [
             r for r in config["runs"]
-            if r["enable"]
+            if r["enabled"]
         ]
 
         enabled_prompts = [
             p for p in config["prompts"]
-            if p["enable"]
+            if p["enabled"]
         ]
 
-        for sd_run in enabled_runs:
+        for sd_run_index, sd_run in enumerate(enabled_runs):
 
+            print(f"▶ sd_run - [{sd_run_index + 1}/{len(enabled_runs)}] - {sd_run['slug_id']}")
             process_sd_run(
                 sd_run,
                 enabled_prompts,

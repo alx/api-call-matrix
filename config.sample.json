@@ -27,7 +27,6 @@
             "slug_id": "sdxl_fast_lcm_canny_openpose_instantID",
 
             "enabled": true,
-            "forced": false,
 
             "positive": "anime",
             "negative": "deformed",
