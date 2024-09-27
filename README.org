@@ -1,0 +1,85 @@
+* API-Call-Matrix
+
+Test many prompts against many StableDiffusion A1111 server inference params.
+
+![Screenshot](docs/screenshot.png)
+** Usage
+
+*** Install
+
+#+begin_src bash
+git clone https://github.com/alx/api-call-matrix.git
+cd api-call-matrix
+
+# TODO install dependencies: hugo, pip
+#+end_src
+
+*** Static web server
+
+**** Full workflow
+
+#+begin_src bash
+./bin/gen_serve.sh
+#+end_src
+
+Open browser: http://127.0.0.1:1313
+
+**** Step-by-step
+
+#+begin_src bash
+python3 ./bin/gen_images.py
+python3 ./bin/gen_content.py
+hugo server
+#+end_src
+
+*** Flask web server
+
+#+begin_src bash
+python3 flask_server.py
+#+end_src
+
+**** TODO Editable runs
+
+** config.json
+
+*** global params
+
+#+begin_src json
+"content_root": "./content/",
+"results_root": "./static/img/results/",
+"sources_root": "./static/img/sources/",
+
+"api_url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+"base64_placeholder": "base64_img_placeholder",
+
+"save_content": true,
+"save_json": true,
+
+"runs": [],
+"prompts": [],
+#+end_src
+
+*** run params
+
+#+begin_src json
+"slug_id": "3d-model-spiderman",
+
+"enabled": true,
+
+"positive": "spiderman",
+"negative": "pig",
+#+end_src
+
+*** prompt params
+
+#+begin_src json
+"slug_id": "sdxl_fast_lcm_canny_openpose_instantID",
+
+"enabled": true,
+"forced": false,
+
+"positive": "anime",
+"negative": "deformed",
+
+"params": { /sd_ui_api_params/ }
+#+end_src

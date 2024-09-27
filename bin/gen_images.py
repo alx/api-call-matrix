@@ -16,121 +16,201 @@ from datetime import datetime
 # Temp fix: append /usr/lib dist-packages
 import sys
 sys.path.append("/usr/lib/python3/dist-packages")
-
 import requests
 
-# Load JSON config from config.json
-with open('config.json', 'r') as file:
-    config = json.load(file)
+# Config data
+config_filepath = 'config.json'
 
-# Extract the prompts from the JSON array
-prompts = config["prompts"]
-
-# SD runs
-sd_runs = config["runs"]
-
-# Set the API URL
-api_url = 'http://127.0.0.1:7860/sdapi/v1/txt2img'
-
-# Get today's date in the format YYYYMMDD
-date_today = datetime.now().strftime('%Y%m%d')
-
-# Ensure the base directory for saving images exists
-base_dir = './static/img/results/'
-os.makedirs(base_dir, exist_ok=True)
-
-# Load and list all files in the source_files directory
-source_files_dir = './static/img/source_files/'
-source_files = [os.path.join(source_files_dir, file) for file in os.listdir(source_files_dir) if os.path.isfile(os.path.join(source_files_dir, file))]
-
-# Check if there are source files
-if len(source_files) == 0:
-    raise ValueError(f"Not enough source files ({len(source_files)}).")
-
-base64_placeholder = "base64_img_placeholder"
-
-# Function to convert an image to base64
 def image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-# For each sd params, use multiple params
-for sd_run in sd_runs:
+def process_prompt(prompt_data, output_dir):
 
-    # Set the sd_run path where the result will be saved, using the source file basename
-    sd_run_dir = os.path.join(base_dir, sd_run["run_slug_id"])
-    os.makedirs(sd_run_dir, exist_ok=True)
+    config = load_config()
 
-    # Iterate through the prompts and corresponding source files, and make the POST request
-    for prompt_index, prompt_data in enumerate(prompts):
+    if "api_url" not in config:
+        raise KeyError(f"❌ api_url not found in config file: {config_filepath}")
 
-        if (
-                "limit_slug_prompts" in sd_run
-                and prompt_data["slug_id"] not in sd_run["limit_slug_prompts"]
-        ):
-            continue;
+    if "sources_root" not in config:
+        raise KeyError(f"❌ sources_root not found in config file: {config_filepath}")
 
-        # populate prompt_data with sd_run
-        prompt_data = prompt_data | sd_run["params"]
-        prompt_data["prompt"] = prompt_data["positive"]
+    if "base64_placeholder" not in config:
+        raise KeyError(f"❌ base64_placeholder not found in config file: {config_filepath}")
 
-        if "append_prompt" in sd_run["params"]:
-            prompt_data["prompt"] += sd_run["params"]["append_prompt"]
+    if "save_json" not in config:
+        raise KeyError(f"❌ save_json not found in config file: {config_filepath}")
 
-        prompt_data["negative_prompt"] = prompt_data["negative"]
-
-        image_dir = os.path.join(sd_run_dir, prompt_data["slug_id"])
-        os.makedirs(image_dir, exist_ok=True)
-
+    if config["save_json"]:
         # Save the request as json
-        json_path = os.path.join(image_dir, f"prompt_data.json")
-        with open(json_path, "w") as json_file:
-            json.dump(prompt_data, json_file)
+        json_path = os.path.join(output_dir, f"prompt_data.json")
+        with open(json_path, "w") as f:
+            json.dump(prompt_data, f)
 
-        # List to keep paths of the saved images
-        result_image_paths = []
+    # Load and list all files in the source_root directory
+    source_files = [
+        os.path.join(config["sources_root"], f)
+        for f in os.listdir(config["sources_root"])
+        if os.path.isfile(os.path.join(config["sources_root"], f))
+    ]
 
-        # For each prompt, use multiple source files
-        for source_file in source_files:
+    # Check if there are source files
+    if len(source_files) == 0:
+        raise ValueError(f"❌ Not enough source files ({len(source_files)}).")
 
-            # Get the basename of the source file (without extension)
-            source_basename = os.path.basename(source_file).split('.')[0]
+    for source_index, source_file in enumerate(source_files):
 
-            # Set the image path where the result will be saved, using the source file basename
-            image_path = os.path.join(image_dir, f"{source_basename}.png")
-            json_path = os.path.join(image_dir, f"{source_basename}.json")
+        # Get the basename of the source file (without extension)
+        source_basename = os.path.basename(source_file).split('.')[0]
 
-            result_image_paths.append(image_path)
+        # Set the image path where the result will be saved
+        # using the source file basename
+        image_path = os.path.join(output_dir, f"{source_basename}.png")
 
-            # Check if the image already exists, if yes, skip the HTTP POST request
-            is_forced = "force" in prompt_data and prompt_data["force"]
-            if not is_forced and os.path.exists(image_path):
-                print(f"Image already exists: {image_path}. Skipping POST request.")
-                continue
+        # Check if the image already exists
+        # if yes: skip the HTTP POST request
+        is_forced = "force" in prompt_data and prompt_data["force"]
+        if not is_forced and os.path.exists(image_path):
+            print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename}")
+            continue
 
-            # Convert the source file to base64
-            base64_image = image_to_base64(source_file)
+        # Convert the source file to base64
+        base64_image = image_to_base64(source_file)
 
-            # Include the base64 image in the prompt data (assuming ControlNet uses "image" field)
-            for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
-                control["image"] = base64_image  # Update the "image" field with the base64 content
+        # Include the base64 image in the prompt data
+        # assuming ControlNet uses "image" field
+        for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
+            control["image"] = base64_image
 
-            response = requests.post(api_url, json=prompt_data)
+        try:
+
+            print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename}")
+
+            # a1111 api request
+            response = requests.post(
+                config["api_url"],
+                json=prompt_data
+            )
 
             # If the request was successful
             if response.status_code == 200:
                 response_data = response.json()
-                base64_img = response_data.get("images")[0]  # Assuming the API response has "image" key with base64 data
+
+                # Assuming the API response has "image" key with base64 data
+                base64_img = response_data.get("images")[0]
 
                 # Save the image as PNG
                 with open(image_path, "wb") as img_file:
                     img_file.write(base64.b64decode(base64_img))
 
                 # Save the result as json
-                with open(json_path, "w") as json_file:
-                    response_data.get("images")[0] = base64_placeholder
-                    json.dump(response_data, json_file)
+                if config["save_json"]:
 
-                print(f"Image saved to: {image_path}")
+                    json_path = os.path.join(
+                        output_dir,
+                        f"{source_basename}.json"
+                    )
+
+                    with open(json_path, "w") as json_file:
+                        response_data.get("images")[0] = config["base64_placeholder"]
+                        json.dump(response_data, json_file)
+
             else:
-                print(f"Failed to get image for title {title}. HTTP Status Code: {response.status_code}")
+                print(f"❌ requests.post {response.status_code}")
+                print(f"❌ {image_path}")
+
+        except requests.exceptions.ConnectionError:
+            print(f"❌ check api_url access! {config['api_url']}")
+
+
+def process_sd_run(
+        sd_run,
+        prompts,
+        top_level_positive="",
+        top_level_negative="",
+):
+
+    config = load_config()
+
+    if "results_root" not in config:
+        raise KeyError(f"❌ results_root not found in config file: {config_filepath}")
+
+    print(f"▶ sd_run - [0/{len(prompts)}] - {sd_run['slug_id']}")
+
+    # Set the sd_run path where the result will be saved,
+    # using the sd_run slug id
+    sd_param_dir = os.path.join(config["results_root"], sd_run["slug_id"])
+    os.makedirs(sd_param_dir, exist_ok=True)
+
+    # Iterate through the prompts and corresponding source files, and make the POST request
+    for prompt_index, prompt_data in enumerate(prompts):
+
+        # populate prompt_data with sd_run
+        prompt_data = prompt_data | sd_run["params"]
+        prompt_data["prompt"] = ""
+        prompt_data["negative_prompt"] = ""
+
+        if "positive" in prompt_data:
+            prompt_data["prompt"] = prompt_data["positive"]
+        if "positive" in sd_run:
+            prompt_data["prompt"] += sd_run["positive"]
+        if len(top_level_positive) > 0:
+            prompt_data["prompt"] += top_level_positive
+
+        if "negative" in prompt_data:
+            prompt_data["negative_prompt"] = prompt_data["negative"]
+        if "negative" in sd_run:
+            prompt_data["prompt"] += sd_run["negative"]
+        if len(top_level_negative) > 0:
+            prompt_data["prompt"] += top_level_negative
+
+        # create output folder
+        output_dir = os.path.join(sd_param_dir, prompt_data["slug_id"])
+        os.makedirs(output_dir, exist_ok=True)
+
+        print(f"▶   prompt - [{prompt_index + 1}/{len(prompts)}] - {prompt_data['slug_id']}")
+        process_prompt(prompt_data, output_dir)
+
+def load_config():
+
+    if not os.path.exists(config_filepath):
+        raise OSError(f"❌ Config file not found: {config_filepath}")
+
+    with open(config_filepath, 'r') as f:
+        config = json.load(f)
+
+    return config
+
+def main():
+
+    config = load_config()
+
+    if "runs" not in config:
+        raise KeyError(f"❌ runs not found in config file: {config_filepath}")
+
+    elif "prompts" not in config:
+        raise KeyError(f"❌ prompts not found in config file: {config_filepath}")
+
+    else:
+
+        enabled_runs = [
+            r for r in config["runs"]
+            if r["enable"]
+        ]
+
+        enabled_prompts = [
+            p for p in config["prompts"]
+            if p["enable"]
+        ]
+
+        for sd_run in enabled_runs:
+
+            process_sd_run(
+                sd_run,
+                enabled_prompts,
+                config["positive"],
+                config["negative"],
+            )
+
+if __name__ == "__main__":
+    main()

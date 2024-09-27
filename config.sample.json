@@ -1,19 +1,38 @@
 {
+    "content_root": "./content/",
+    "results_root": "./static/img/results/",
+    "sources_root": "./static/img/sources/",
+
+    "api_url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+    "base64_placeholder": "base64_img_placeholder",
+
+    "save_content": true,
+    "save_json": true,
+
+    "positive": "sticker",
+    "negative": "white background",
+
     "prompts": [
         {
+            "slug_id": "3d-model-spiderman",
 
-            "slug_id": "best-marathon-sunrise-beach",
-            "positive": "professional 3d model of <lora:Spider-Man:1.2> Spider-Man, sunrise, beach, thailand, traditional Buddhist art style painting,Thai art"
+            "enabled": true,
+
+            "positive": "spiderman",
+            "negative": "pig"
         }
     ],
     "runs": [
         {
-            "run_slug_id": "sdxl_fast_lcm_canny_openpose_instantid",
-            "status": "COMPLETE",
-            "params": {
+            "slug_id": "sdxl_fast_lcm_canny_openpose_instantID",
 
-                "append_prompt": ", <lora:sd_xl_turbo_lora_v1:1>",
-                "negative": "text, bad art, blurry, watermark, person, tripod, letters, ugly, deformed, glasses",
+            "enabled": true,
+            "forced": false,
+
+            "positive": "anime",
+            "negative": "deformed",
+
+            "params": {
 
                 "send_images": true,
                 "save_images": true,
