@@ -3,5 +3,6 @@ config.json
 .packages/
 public/
 content/*.org
+content/*.html
 static/img/source_files/*
 static/img/results/*

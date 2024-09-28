@@ -4,40 +4,29 @@ import json
 import os
 import base64
 from datetime import datetime
-
-#
-# TODO fix: No module named 'request'
-# (api-call-matrix) alx@slim:~/code/api-call-matrix$ python3 gen_gallery.py
-# Traceback (most recent call last):
-#   File "/home/alx/code/api-call-matrix/gen_gallery.py", line 4, in <module>
-#     import requests
-# ModuleNotFoundError: No module named 'requests'
-#
-# Probable cause: uv install
-#
-# Temp fix: append /usr/lib dist-packages
-import sys
-sys.path.append("/usr/lib/python3/dist-packages")
 import requests
+import jinja2
 
 # Config data
 config_filepath = 'config.json'
+
+# Templates
+env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(searchpath="./templates/"),
+    autoescape=jinja2.select_autoescape()
+)
+
+template_sdrun = env.get_template("sdrun.html")
+template_prompt = env.get_template("prompt.html")
+
+####
+####
 
 def content_path(filename="_index.html"):
 
     config = load_config()
 
     return os.path.join(config["content_root"], filename)
-
-# Function to create an content file
-def init_content():
-
-    index_content = (
-    )
-
-    # Write the content to the content file
-    with open(content_path(), "w+") as f:
-        f.writelines(index_content)
 
 def sd_run_to_content(sd_run):
 
@@ -66,27 +55,12 @@ def sd_run_to_content(sd_run):
             # replace base64 image by placeholder
             control_data["image"] = config["base64_placeholder"]
 
-    badges = [
-        f"<span class='badge rounded-pill text-bg-secondary'>{c}</span>"
-        for c in categories
-        ]
-
-    content = (
-        f'<h1>{slug}</h1>'
-        f'<p>{"".join(badges)}</p>'
-    )
-
-    if config["save_json"]:
-        content += (
-            f'<p class="d-inline-flex gap-1">'
-            f'<a class="btn btn-primary" data-bs-toggle="collapse" href="#collapse{slug}" role="button" aria-expanded="false" aria-controls="collapse">'
-            f'SD Params'
-            f'</a>'
-            f'<div class="collapse" id="collapse{slug}">'
-            f'<pre><code>'
-            f'{json.dumps(sd_params, indent=4)}'
-            f'</code></pre></div>'
-        )
+    content = template_sdrun.render({
+        "slug": sd_run["slug_id"],
+        "badges": categories,
+        "save_json": config["save_json"],
+        "sd_params": json.dumps(sd_params, sort_keys=False, indent=2)
+    })
 
     for prompt in sd_run["prompts"]:
         content += prompt
@@ -110,34 +84,21 @@ def prompt_to_content(prompt_data, result_output_paths):
         for image_path in result_output_paths
     ]
 
-    images_list = []
+    img_list = []
     for img_path in image_paths:
         json_path = img_path.replace(".png", ".json")
-        images_list.append(
-            f'<div class="card w-25 m-2">'
-            f'<a href={img_path} '
-            f'class="gen_img text-decoration-none shadow-none p-2" '
-            f'data-pswp-width="{prompt_data["width"]}" '
-            f'data-pswp-height="{prompt_data["height"]}" '
-            f'target="_blank">'
-            f'<img src="{img_path}" alt="{os.path.basename(img_path)}">'
-            f'</a>'
-            f'<div class="card-body">'
-            f'<div class="card-text">'
-            f'<a href="{json_path}" target="_blank">json</a>'
-            f'</div>'
-            f'</div>'
-            f'</div>'
-        )
+        img_list.append({
+            "basename": os.path.basename(img_path),
+            "path": img_path,
+            "json_path": img_path.replace(".png", ".json"),
+            "width": prompt_data["width"],
+            "height": prompt_data["height"]
+        })
 
-    content = (
-        f'<h2>{prompt_data["slug_id"]}</h2>'
-        f'<div class="pswp-gallery pswp-gallery--single-column list-group list-group-horizontal">'
-        f'{"".join(images_list)}'
-        f'</div>'
-    )
-
-    return content
+    return template_prompt.render({
+        "slug": prompt_data["slug_id"],
+        "img_list": img_list
+    })
 
 def process_prompt(prompt_data, output_dir):
 

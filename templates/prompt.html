@@ -1,0 +1,26 @@
+<h2>{{slug}}</h2>
+
+<div class="pswp-gallery pswp-gallery--single-column list-group list-group-horizontal">
+
+  {% for img in img_list %}
+  <div class="card w-25 m-2">
+    <a
+      href={{img.path}}
+      class="gen_img text-decoration-none shadow-none p-2"
+      data-pswp-width="{{width}}"
+      data-pswp-height="{{height}}"
+      target="_blank">
+
+      <img src="{{img.path}}" alt="{{img.basename}}">
+
+    </a>
+
+    <div class="card-body">
+      <div class="card-text">
+        <a href="{{img.json_path}}" target="_blank">json</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>

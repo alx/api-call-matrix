@@ -1,0 +1,27 @@
+<h1>{{slug}}</h1>
+
+<p>
+  {% for badge in badges %}
+  <span class='badge rounded-pill text-bg-secondary'>
+    {{badge}}
+  </span>
+  {% endfor %}
+</p>
+
+{% if save_json %}
+<p class="d-inline-flex gap-1">
+
+  <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapse{{slug}}" role="button" aria-expanded="false" aria-controls="collapse">
+    SD Params
+  </a>
+
+  <div class="collapse" id="collapse{{slug}}">
+
+    <pre><code>
+        {{sd_params}}
+    </code></pre>
+
+  </div>
+
+</p>
+{% endif %}

@@ -12,7 +12,9 @@ Test many prompts against many StableDiffusion A1111 server inference params.
 git clone https://github.com/alx/api-call-matrix.git
 cd api-call-matrix
 
-# TODO install dependencies: hugo, pip
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
 #+end_src
 
 *** Static web server
@@ -20,7 +22,7 @@ cd api-call-matrix
 **** Full workflow
 
 #+begin_src bash
-./bin/gen_serve.sh
+./gen_serve.sh
 #+end_src
 
 Open browser: http://127.0.0.1:1313
@@ -28,8 +30,8 @@ Open browser: http://127.0.0.1:1313
 **** Step-by-step
 
 #+begin_src bash
-python3 ./bin/gen_images.py
-python3 ./bin/gen_content.py
+python3 ./gen_images.py
+python3 ./gen_content.py
 hugo server
 #+end_src
 
