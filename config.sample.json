@@ -3,8 +3,11 @@
     "results_root": "./static/img/results/",
     "sources_root": "./static/img/sources/",
 
-    "api_url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
-    "base64_placeholder": "base64_img_placeholder",
+    "api": {
+        "host": "127.0.0.1",
+        "port": 7860
+    },
+    "placeholder": "img_placeholder",
 
     "save_content": true,
     "save_json": true,
@@ -64,7 +67,7 @@
                                 "guidance_end": 1.0,
                                 "guidance_start": 0.0,
                                 "hr_option": "Both",
-                                "image": "palceholder_base64",
+                                "image": "placeholder_base64",
                                 "mask_image": null,
                                 "mask_image_fg": null,
                                 "model": "control-lora-canny-rank128 [c910cde9]",
@@ -88,7 +91,7 @@
                                 "guidance_end": 1.0,
                                 "guidance_start": 0.0,
                                 "hr_option": "Both",
-                                "image": "palceholder_base64",
+                                "image": "placeholder_base64",
                                 "mask_image": null,
                                 "mask_image_fg": null,
                                 "model": "thibaud_xl_openpose_256lora [14288071]",
@@ -113,7 +116,7 @@
                                 "guidance_end": 1.0,
                                 "guidance_start": 0.0,
                                 "hr_option": "Both",
-                                "image": "palceholder_base64",
+                                "image": "placeholder_base64",
                                 "mask_image": null,
                                 "mask_image_fg": null,
                                 "model": "instantIDSDXL_ipAdapterInstantId [eb2d3ec0]",

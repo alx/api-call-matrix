@@ -52,7 +52,10 @@ python3 flask_server.py
 "results_root": "./static/img/results/",
 "sources_root": "./static/img/sources/",
 
-"api_url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+"api": {
+    "host": "127.0.0.1",
+    "port": 7860
+},
 "base64_placeholder": "base64_img_placeholder",
 
 "save_content": true,

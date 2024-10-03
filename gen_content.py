@@ -2,9 +2,7 @@
 #!/usr/bin/env python3
 import json
 import os
-import base64
 from datetime import datetime
-import requests
 import jinja2
 
 # Config data
