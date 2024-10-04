@@ -4,13 +4,89 @@ import os
 from datetime import datetime
 
 import webuiapi
-from webuiapi import raw_b64_img
+from webuiapi import b64_img, raw_b64_img
 
 import PIL
 from PIL import Image, PngImagePlugin
 
 # Config data
 config_filepath = 'config.json'
+
+def process_source(
+        api,
+        prompt_data,
+        input_image,
+        output_path
+):
+    use_async = False
+    controlnet_units = []
+
+    for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
+
+        # replace placeholder in prompt_data controlnets
+        if "image" in control:
+            control["image"] = raw_b64_img(input_image)
+
+        controlnet_units.append(control)
+
+    prompt_data["controlnet_units"] = controlnet_units
+
+    if "reactor" in prompt_data:
+        # include ReActor extension parameters in prompt_data
+        reactor = webuiapi.ReActor(
+            img=input_image,
+            source_faces_index = "0,1,2,3", #2 Comma separated face number(s) from swap-source image
+            faces_index = "0,1,2,3", #3 Comma separated face number(s) for target image (result)
+            upscaler_name =  "None",# None, # "R-ESRGAN 4x+", #8 Upscaler (type 'None' if doesn't need), see full list here: http://127.0.0.1:7860/sdapi/v1/script-info -> reactor -> sec.8
+            swap_in_source = True,
+            console_logging_level = 2, #13 Console Log Level (0 - min, 1 - med or 2 - max)
+            codeFormer_weight = 1,
+            target_hash_check = True,
+            mask_face = False,
+        )
+        prompt_data["alwayson_scripts"]["reactor"] = {
+            "args": reactor.to_dict()
+        }
+
+    if "interrogate" in prompt_data:
+        interrogator_prompt = {
+            "image": b64_img(input_image),
+            "clip_model_name": "RN50/openai"
+        }
+        response = api.post_and_get_api_result(
+            f"http://127.0.0.1:7860/interrogator/prompt",
+            interrogator_prompt,
+            use_async
+        )
+        print(response.json)
+
+    try:
+
+
+        #####
+        #
+        #
+        # a1111 api request
+        #
+        #
+        #####
+        response = api.post_and_get_api_result(
+            f"{api.baseurl}/txt2img",
+            prompt_data,
+            use_async
+        )
+
+        # Save the image
+        response.image.save(output_path)
+
+        return response.json
+
+    except RuntimeError:
+        print(api.baseurl)
+        print(f"❌ response {response.status_code}")
+        print(f"❌ {image_path}")
+
+        return {}
 
 def process_prompt(
         api,
@@ -47,88 +123,40 @@ def process_prompt(
         raise ValueError(f"❌ Not enough source files ({len(source_files)}).")
 
     for source_index, source_file in enumerate(source_files):
-
         # Get the basename of the source file (without extension)
         source_basename = os.path.basename(source_file).split('.')[0]
 
         # Set the image path where the result will be saved
         # using the source file basename
-        image_path = os.path.join(output_dir, f"{source_basename}.png")
+        output_path = os.path.join(output_dir, f"{source_basename}.png")
 
         # Check if the image already exists
         # if yes: skip the HTTP POST request
-        if os.path.exists(image_path):
+        if os.path.exists(output_path):
             print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename} - exists")
             continue
 
         # move the source file to PIL Image
-        source_image = Image.open(source_file)
+        input_image = Image.open(source_file)
 
-        controlnet_units = []
-        for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
+        print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename}")
+        result_json = process_source(
+            api,
+            prompt_data,
+            input_image,
+            output_path
+        )
 
-            # replace placeholder in prompt_data controlnets
-            if "image" in control:
-                control["image"] = raw_b64_img(source_image)
+        # Save the result as json
+        if config["save_json"]:
 
-            controlnet_units.append(control)
-
-        prompt_data["controlnet_units"] = controlnet_units
-
-        if "reactor" in prompt_data:
-            # include ReActor extension parameters in prompt_data
-            reactor = webuiapi.ReActor(
-                img=source_image,
-                source_faces_index = "0,1,2,3", #2 Comma separated face number(s) from swap-source image
-                faces_index = "0,1,2,3", #3 Comma separated face number(s) for target image (result)
-                upscaler_name =  "None",# None, # "R-ESRGAN 4x+", #8 Upscaler (type 'None' if doesn't need), see full list here: http://127.0.0.1:7860/sdapi/v1/script-info -> reactor -> sec.8
-                swap_in_source = True,
-                console_logging_level = 2, #13 Console Log Level (0 - min, 1 - med or 2 - max)
-                codeFormer_weight = 1,
-                target_hash_check = True,
-                mask_face = False,
-            )
-            prompt_data["alwayson_scripts"]["reactor"] = {
-                "args": reactor.to_dict()
-            }
-
-        try:
-
-            print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename}")
-
-            #####
-            #
-            #
-            # a1111 api request
-            #
-            #
-            #####
-            use_async = False
-            response = api.post_and_get_api_result(
-                f"{api.baseurl}/txt2img",
-                prompt_data,
-                use_async
+            json_path = os.path.join(
+                output_dir,
+                f"{source_basename}.json"
             )
 
-            # Save the image
-            response.image.save(image_path)
-
-            # Save the result as json
-            if config["save_json"]:
-
-                json_path = os.path.join(
-                    output_dir,
-                    f"{source_basename}.json"
-                )
-
-                with open(json_path, "w") as f:
-                    json.dump(response.json, f)
-
-        except RuntimeError:
-            print(api.baseurl)
-            print(f"❌ response {response.status_code}")
-            print(f"❌ {image_path}")
-
+            with open(json_path, "w") as f:
+                json.dump(result_json, f)
 
 def process_sd_run(
         api,
@@ -181,6 +209,10 @@ def process_sd_run(
             # TODO explain parameter
             prompt_data["restore_faces"] = False
             prompt_data["reactor"] = True
+
+        if "interrogate" in sd_run \
+            and sd_run["interrogate"]:
+            prompt_data["interrogate"] = True
 
         print(f"▶   prompt - [{prompt_index + 1}/{len(prompts)}] - {prompt_data['slug_id']}")
         process_prompt(
