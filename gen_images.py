@@ -83,7 +83,6 @@ def process_prompt(
                 faces_index = "0,1,2,3", #3 Comma separated face number(s) for target image (result)
                 upscaler_name =  "None",# None, # "R-ESRGAN 4x+", #8 Upscaler (type 'None' if doesn't need), see full list here: http://127.0.0.1:7860/sdapi/v1/script-info -> reactor -> sec.8
                 swap_in_source = True,
-                swap_in_generated = True,
                 console_logging_level = 2, #13 Console Log Level (0 - min, 1 - med or 2 - max)
                 codeFormer_weight = 1,
                 target_hash_check = True,
