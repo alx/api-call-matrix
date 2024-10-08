@@ -2,6 +2,7 @@
 import json
 import os
 from datetime import datetime
+import itertools
 
 import webuiapi
 from webuiapi import b64_img, raw_b64_img
@@ -12,14 +13,70 @@ from PIL import Image, PngImagePlugin
 # Config data
 config_filepath = 'config.json'
 
+def process_interrogator(
+        input_image
+):
+    config = load_config()
+    api = load_api(config)
+    use_async = False
+
+    interrogator_config = config["api"]["interrogator"]
+    interrogator_prompt = ""
+
+    interrogator_params = {
+        "image": b64_img(input_image),
+        "clip_model_name": interrogator_config["clip_model_name"],
+        "mode": interrogator_config["mode"]
+    }
+
+    interrogator_url = f'http://{interrogator_config["host"]}:{interrogator_config["port"]}/{interrogator_config["prompt_endpoint"]}'
+
+    try:
+
+        interrogator_response = api.post_and_get_api_result(
+            interrogator_url,
+            interrogator_params,
+            use_async
+        )
+
+        # Check if an exception occured
+        response_prompt = interrogator_response.json["prompt"]
+        if "Exception" in response_prompt:
+            raise RuntimeError
+
+        else:
+
+            # Get TOP results from prompt
+            if "sliced_top_prompts" in interrogator_config:
+
+                interrogator_prompt = ",".join(itertools.islice(
+                    response_prompt.split(","),
+                    interrogator_config["sliced_top_prompts"]
+                ))
+
+            else:
+
+                interrogator_prompt = response_prompt
+
+    except RuntimeError:
+        print(f"❌ interrogator runtime error")
+
+    print(interrogator_prompt)
+    return interrogator_prompt
+
 def process_source(
-        api,
         prompt_data,
         input_image,
         output_path
 ):
+
+    config = load_config()
+    api = load_api(config)
     use_async = False
+
     controlnet_units = []
+
+    origin_prompt = prompt_data["prompt"]
 
     for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
 
@@ -48,17 +105,14 @@ def process_source(
             "args": reactor.to_dict()
         }
 
-    if "interrogate" in prompt_data:
-        interrogator_prompt = {
-            "image": b64_img(input_image),
-            "clip_model_name": "RN50/openai"
-        }
-        response = api.post_and_get_api_result(
-            f"http://127.0.0.1:7860/interrogator/prompt",
+    if "interrogator" in config["api"]:
+        interrogator_prompt = process_interrogator(input_image)
+
+        prompt_data["prompt"] = ",".join([
             interrogator_prompt,
-            use_async
-        )
-        print(response.json)
+            prompt_data["prompt"]
+        ])
+        print(prompt_data["prompt"])
 
     try:
 
@@ -79,6 +133,9 @@ def process_source(
         # Save the image
         response.image.save(output_path)
 
+        # Restore prompt if modified by interrogator
+        prompt_data["prompt"] = origin_prompt
+
         return response.json
 
     except RuntimeError:
@@ -89,7 +146,6 @@ def process_source(
         return {}
 
 def process_prompt(
-        api,
         prompt_data,
         output_dir,
 ):
@@ -141,7 +197,6 @@ def process_prompt(
 
         print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename}")
         result_json = process_source(
-            api,
             prompt_data,
             input_image,
             output_path
@@ -159,7 +214,6 @@ def process_prompt(
                 json.dump(result_json, f)
 
 def process_sd_run(
-        api,
         sd_run,
         prompts,
         top_level_positive="",
@@ -210,13 +264,8 @@ def process_sd_run(
             prompt_data["restore_faces"] = False
             prompt_data["reactor"] = True
 
-        if "interrogate" in sd_run \
-            and sd_run["interrogate"]:
-            prompt_data["interrogate"] = True
-
         print(f"▶   prompt - [{prompt_index + 1}/{len(prompts)}] - {prompt_data['slug_id']}")
         process_prompt(
-            api,
             prompt_data,
             output_dir
         )
@@ -231,6 +280,16 @@ def load_config():
 
     return config
 
+def load_api(config):
+
+    if "api" not in config:
+        raise KeyError(f"❌ api not found in config file: {config_filepath}")
+
+    if "a1111" not in config["api"]:
+        raise KeyError(f"❌ a1111 not found in config file: {config_filepath}")
+
+    return webuiapi.WebUIApi(**config["api"]["a1111"])
+
 def main():
 
     config = load_config()
@@ -242,8 +301,6 @@ def main():
         raise KeyError(f"❌ prompts not found in config file: {config_filepath}")
 
     else:
-
-        api = webuiapi.WebUIApi(**config["api"])
 
         enabled_runs = [
             r for r in config["runs"]
@@ -259,7 +316,6 @@ def main():
 
             print(f"▶ sd_run - [{sd_run_index + 1}/{len(enabled_runs)}] - {sd_run['slug_id']}")
             process_sd_run(
-                api,
                 sd_run,
                 enabled_prompts,
                 config["positive"],
