@@ -112,7 +112,6 @@ def process_source(
             interrogator_prompt,
             prompt_data["prompt"]
         ])
-        print(prompt_data["prompt"])
 
     try:
 
@@ -188,7 +187,7 @@ def process_prompt(
 
         # Check if the image already exists
         # if yes: skip the HTTP POST request
-        if os.path.exists(output_path):
+        if os.path.exists(output_path) and not config["force_generate"]:
             print(f"▶     source - [{source_index + 1}/{len(source_files)}] - {source_basename} - exists")
             continue
 
