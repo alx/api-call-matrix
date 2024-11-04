@@ -4,25 +4,54 @@ import os
 import io
 import itertools
 import base64
+import traceback
+import datetime
 
 import webuiapi
 from webuiapi import b64_img, raw_b64_img
 
 import PIL
-from PIL import Image, PngImagePlugin
+from PIL import Image, PngImagePlugin, ImageFilter
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
+from werkzeug.utils import secure_filename
+
+CONFIG_FILE = 'config.json'
+UPLOAD_FOLDER = './uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['CONFIG_FILE'] = CONFIG_FILE
 
-# Config data
-config_filepath = 'config.json'
+def load_config():
+
+    if not os.path.exists(app.config['CONFIG_FILE']):
+        raise OSError(f"❌ Config file not found: {app.config['CONFIG_FILE']}")
+
+    with open(app.config['CONFIG_FILE'], 'r') as f:
+        config = json.load(f)
+
+    return config
+
+def load_api():
+
+    config = load_config()
+
+    if "api" not in config:
+        raise KeyError(f"❌ api not found in config file: {config_filepath}")
+
+    if "a1111" not in config["api"]:
+        raise KeyError(f"❌ a1111 not found in config file: {config_filepath}")
+
+    return webuiapi.WebUIApi(**config["api"]["a1111"])
+
+config = load_config()
+api = load_api()
 
 def process_interrogator(
         input_image
 ):
-    config = load_config()
-    api = load_api(config)
     use_async = False
 
     interrogator_config = config["api"]["interrogator"]
@@ -68,8 +97,7 @@ def process_interrogator(
 
     return interrogator_prompt
 
-def load_prompt_data(input_image):
-    config = load_config()
+def load_prompt_data(input_image, slug):
 
     sd_run = [
         r for r in config["runs"]
@@ -78,7 +106,7 @@ def load_prompt_data(input_image):
 
     prompt = [
         p for p in config["prompts"]
-        if p["enabled"]
+        if p["enabled"] and p["slug_id"] == slug
     ][0]
 
     # populate prompt_data with sd_run
@@ -95,6 +123,15 @@ def load_prompt_data(input_image):
         prompt_data["negative_prompt"] = prompt["negative"]
     if "negative" in sd_run:
         prompt_data["negative_prompt"] += sd_run["negative"]
+
+    if "interrogator" in config["api"]:
+
+        interrogator_prompt = process_interrogator(input_image)
+
+        prompt_data["prompt"] = ",".join([
+            interrogator_prompt,
+            prompt_data["prompt"]
+        ])
 
     controlnet_units = []
     for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
@@ -129,50 +166,35 @@ def load_prompt_data(input_image):
             "args": reactor.to_dict()
         }
 
-    if "interrogator" in config["api"]:
-
-        interrogator_prompt = process_interrogator(input_image)
-
-        prompt_data["prompt"] = ",".join([
-            interrogator_prompt,
-            prompt_data["prompt"]
-        ])
-
     return prompt_data
-
-
-def load_config():
-
-    if not os.path.exists(config_filepath):
-        raise OSError(f"❌ Config file not found: {config_filepath}")
-
-    with open(config_filepath, 'r') as f:
-        config = json.load(f)
-
-    return config
-
-def load_api(config):
-
-    if "api" not in config:
-        raise KeyError(f"❌ api not found in config file: {config_filepath}")
-
-    if "a1111" not in config["api"]:
-        raise KeyError(f"❌ a1111 not found in config file: {config_filepath}")
-
-    return webuiapi.WebUIApi(**config["api"]["a1111"])
 
 @app.route("/gen", methods=['POST'])
 def gen_image():
 
-    config = load_config()
-    api = load_api(config)
+    if 'image' not in request.files or \
+       'prompt' not in request.values:
+        return "Bad Request", 400
 
-    msg = base64.b64decode(request.json["image"])
-    buf = io.BytesIO(msg)
-    input_image = Image.open(buf)
-    input_image.save("image.png")
+    input_image = request.files['image']
+    input_filename = secure_filename(input_image.filename)
+    input_filename = input_filename.replace(".jpg", datetime.datetime.now().strftime("_%Y-%m-%d_%H-%M-%S.jpg"))
+    input_filepath = os.path.join(app.config['UPLOAD_FOLDER'], input_filename)
+    input_image.save(input_filepath)
 
-    prompt_data = load_prompt_data(input_image)
+    resized_image = Image.open(input_filepath).convert("RGB")
+
+    # input_image is 960x720
+    # 1. center crop to get a 720x720 image size
+    # 2. resize image to 1024x1024
+    resized_image = resized_image.crop(((960-720)//2, 0, (960+720)//2, 720))
+    resized_image = resized_image.resize((1024, 1024))
+    resized_filename = input_filename.replace(".jpg", "_resized.jpg")
+    resized_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resized_filename)
+    resized_image.save(resized_filepath)
+
+    slug = request.values["prompt"]
+
+    prompt_data = load_prompt_data(resized_image, slug)
 
     try:
 
@@ -191,12 +213,19 @@ def gen_image():
         )
         print(response)
 
-        return jsonify({
-            "image": b64_img(response.images[0])
-        })
+        response_filename = input_filename.replace(".jpg", "_response.png")
+        response_filepath = os.path.join(app.config['UPLOAD_FOLDER'], response_filename)
+        response.images[0].save(response_filepath)
 
-    except RuntimeError:
-        return 500
+        return send_from_directory(
+            app.config['UPLOAD_FOLDER'],
+            response_filename
+        )
+
+    # TODO print exception stacktrace
+    except RuntimeError as e:
+        traceback.print_exc()
+        return "Internal Server Error", 500
 
 @app.route("/accept")
 def publish_image():
