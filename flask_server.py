@@ -16,12 +16,16 @@ from PIL import Image, PngImagePlugin, ImageFilter
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
+from git import Repo
+
 CONFIG_FILE = 'config.json'
 UPLOAD_FOLDER = './uploads'
+GIT_REPO_FOLDER = '.'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['GIT_REPO_FOLDER'] = GIT_REPO_FOLDER
 app.config['CONFIG_FILE'] = CONFIG_FILE
 
 def load_config():
@@ -227,12 +231,26 @@ def gen_image():
         traceback.print_exc()
         return "Internal Server Error", 500
 
-@app.route("/accept")
+@app.route("/keep")
 def publish_image():
 
-    # get latest image
-    # git add commit
-    # git push
-    # create url
-    # return url
-    return f"https://github.com/alx/onastick/public/{image}"
+    repo = Repo(app.config['GIT_REPO_FOLDER'])
+
+    # Add latest response file to git repo index
+    latest_response_path = max(
+        [
+            os.path.join(app.config['UPLOAD_FOLDER'], f)
+            for f in os.listdir(app.config['UPLOAD_FOLDER'])
+            if f.endswith('_response.png')
+        ]
+        , key=os.path.getctime)
+    filename = os.path.basename(latest_response_path)
+    repo.index.add([latest_response_path])
+
+    # Commit change
+    repo.index.commit("publish: add latest response")
+
+    # push to origin
+    repo.remote("origin").push()
+
+    return f"https://raw.githubusercontent.com/alx/onastick/main/{app.config['UPLOAD_FOLDER']}/{filename}"

@@ -1,8 +1,9 @@
+.venv/
+__pycache__/
 config.json
 .hugo_build.lock
 .packages/
 public/
 content/*.org
 content/*.html
-static/img/source_files/*
-static/img/results/*
+static/img/*
