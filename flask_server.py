@@ -16,15 +16,17 @@ from PIL import Image, PngImagePlugin, ImageFilter
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
-from git import Repo
+import subprocess
 
 CONFIG_FILE = 'config.json'
 UPLOAD_FOLDER = './uploads'
+GALLERY_FOLDER = './gallery'
 GIT_REPO_FOLDER = '.'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['GALLERY_FOLDER'] = GALLERY_FOLDER
 app.config['GIT_REPO_FOLDER'] = GIT_REPO_FOLDER
 app.config['CONFIG_FILE'] = CONFIG_FILE
 
@@ -245,12 +247,12 @@ def publish_image():
         ]
         , key=os.path.getctime)
     filename = os.path.basename(latest_response_path)
-    repo.index.add([latest_response_path])
 
-    # Commit change
-    repo.index.commit("publish: add latest response")
+    destination_path = os.path.join(app.config['GALLERY_FOLDER'], os.path.basename(latest_response_path))
+    shutil.copy(latest_response_path, destination_path)
 
-    # push to origin
-    repo.remote("origin").push()
+    subprocess.run(['git', 'add', destination_path], check=True)
+    subprocess.run(['git', 'commit', '-m', "publish: add latest response"], check=True)
+    subprocess.run(['git', 'push', 'origin'], check=True)
 
     return f"https://raw.githubusercontent.com/alx/onastick/main/{app.config['UPLOAD_FOLDER']}/{filename}"
