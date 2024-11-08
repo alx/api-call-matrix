@@ -17,6 +17,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
 import subprocess
+import shutil
 
 CONFIG_FILE = 'config.json'
 UPLOAD_FOLDER = './uploads'
@@ -236,8 +237,6 @@ def gen_image():
 @app.route("/keep")
 def publish_image():
 
-    repo = Repo(app.config['GIT_REPO_FOLDER'])
-
     # Add latest response file to git repo index
     latest_response_path = max(
         [
@@ -251,8 +250,11 @@ def publish_image():
     destination_path = os.path.join(app.config['GALLERY_FOLDER'], os.path.basename(latest_response_path))
     shutil.copy(latest_response_path, destination_path)
 
-    subprocess.run(['git', 'add', destination_path], check=True)
-    subprocess.run(['git', 'commit', '-m', "publish: add latest response"], check=True)
-    subprocess.run(['git', 'push', 'origin'], check=True)
+    try:
+        subprocess.run(['git', 'add', destination_path], check=True)
+        subprocess.run(['git', 'commit', '-m', "publish: add latest response"], check=True)
+        subprocess.run(['git', 'push', 'origin'], check=True)
+    except:
+        print("error while keeping latest generated image inside git repository")
 
-    return f"https://raw.githubusercontent.com/alx/onastick/main/{app.config['UPLOAD_FOLDER']}/{filename}"
+    return f"https://raw.githubusercontent.com/alx/api-call-matrix/refs/heads/main/gallery/{filename}"
