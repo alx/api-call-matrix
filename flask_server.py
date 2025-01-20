@@ -201,38 +201,40 @@ def gen_image():
 
     resized_image = Image.open(input_filepath).convert("RGB")
     width, height = resized_image.size
-    app.logger.info(f"Dimensions: {width}x{height}")
-    result_width=1024
-    result_height = 1024
+    is_landscape = width > height
 
-    if width == 960 and height == 720:
-        # Portable webcam setup
-        # Center crop to get a 720x720 image size
-        left = (width - 720) // 2
-        top = 0
-        right = (width + 720) // 2
-        bottom = 720
-        resized_image = resized_image.crop((left, top, right, bottom))
-    elif width == 720 and height == 1280:
-        # Telegram bot setup - portrait
-        result_width = 768
-        result_height = 1344
-    elif width == 1280 and height == 720:
-        # Telegram bot setup - landscape
-        result_width = 1344
-        result_height = 768
-    elif width > height:
-        # Compute the width/height ratio and use it to resize image with max width/height = 1344
-        aspect_ratio = width / height
-        result_width = min(1344, int(1344 * aspect_ratio))
-        result_height = min(768, int(result_width / aspect_ratio))
+    # Calculate target dimensions
+    if is_landscape:
+        target_width = 1344
+        target_height = 768
     else:
-        # For portrait images or square images
-        aspect_ratio = height / width
-        result_height = min(1344, int(1344 * aspect_ratio))
-        result_width = min(768, int(result_height / aspect_ratio))
+        target_width = 768
+        target_height = 1344
 
-    resized_image = resized_image.resize((result_width, result_height))
+    # Calculate aspect ratios
+    aspect_ratio = width / height
+    target_aspect_ratio = target_width / target_height
+
+    # Resize image
+    if aspect_ratio > target_aspect_ratio:
+        new_height = target_height
+        new_width = int(new_height * aspect_ratio)
+    else:
+        new_width = target_width
+        new_height = int(new_width / aspect_ratio)
+
+    resized_image = resized_image.resize((new_width, new_height), Image.LANCZOS)
+
+    # Center crop
+    left = (new_width - target_width) // 2
+    top = (new_height - target_height) // 2
+    right = left + target_width
+    bottom = top + target_height
+    resized_image = resized_image.crop((left, top, right, bottom))
+
+    new_width = int(right - left)
+    new_height = int(bottom - top)
+
     resized_filename = input_filename.replace(".jpg", "_resized.jpg")
     resized_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resized_filename)
     resized_image.save(resized_filepath)
@@ -241,16 +243,16 @@ def gen_image():
         prompt_data = load_prompt_data(
             resized_image,
             slug=request.values["prompt"],
-            width=result_width,
-            height=result_height
+            width=new_width,
+            height=new_height
         )
 
     if "prompt-text" in request.values:
         prompt_data = load_prompt_data(
             resized_image,
             prompt_text=request.values["prompt-text"],
-            width=result_width,
-            height=result_height
+            width=new_width,
+            height=new_height
         )
 
     if prompt_data is None:
