@@ -125,7 +125,6 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
     else:
         prompt = available_prompts[0]
 
-    app.logger.info(prompt)
     # populate prompt_data with sd_run
     prompt_data = sd_run["params"]
     prompt_data["prompt"] = ""
@@ -192,7 +191,6 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
 def gen_image():
 
     if 'image' not in request.files:
-        app.logger.info(request)
         return "Bad Request", 400
 
     input_image = request.files['image']
@@ -217,16 +215,22 @@ def gen_image():
         resized_image = resized_image.crop((left, top, right, bottom))
     elif width == 720 and height == 1280:
         # Telegram bot setup - portrait
-        app.logger.info("Telegram - portrait")
         result_width = 768
         result_height = 1344
     elif width == 1280 and height == 720:
         # Telegram bot setup - landscape
-        app.logger.info("Telegram - landscape")
         result_width = 1344
         result_height = 768
+    elif width > height:
+        # Compute the width/height ratio and use it to resize image with max width/height = 1344
+        aspect_ratio = width / height
+        result_width = min(1344, int(1344 * aspect_ratio))
+        result_height = min(768, int(result_width / aspect_ratio))
     else:
-        raise ValueError(f"Unexpected image dimensions: {width}x{height}")
+        # For portrait images or square images
+        aspect_ratio = height / width
+        result_height = min(1344, int(1344 * aspect_ratio))
+        result_width = min(768, int(result_height / aspect_ratio))
 
     resized_image = resized_image.resize((result_width, result_height))
     resized_filename = input_filename.replace(".jpg", "_resized.jpg")
@@ -267,7 +271,6 @@ def gen_image():
             prompt_data,
             False
         )
-        app.logger.info(response)
 
         response_filename = input_filename.replace(".jpg", "_response.png")
         response_filepath = os.path.join(app.config['UPLOAD_FOLDER'], response_filename)
