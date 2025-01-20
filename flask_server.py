@@ -10,8 +10,7 @@ import datetime
 import webuiapi
 from webuiapi import b64_img, raw_b64_img
 
-import PIL
-from PIL import Image, PngImagePlugin, ImageFilter
+from PIL import Image
 
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -46,10 +45,10 @@ def load_api():
     config = load_config()
 
     if "api" not in config:
-        raise KeyError(f"❌ api not found in config file: {config_filepath}")
+        raise KeyError(f"❌ api not found in config file")
 
     if "a1111" not in config["api"]:
-        raise KeyError(f"❌ a1111 not found in config file: {config_filepath}")
+        raise KeyError(f"❌ a1111 not found in config file")
 
     return webuiapi.WebUIApi(**config["api"]["a1111"])
 
@@ -100,22 +99,33 @@ def process_interrogator(
                 interrogator_prompt = response_prompt
 
     except RuntimeError:
-        print(f"❌ interrogator runtime error")
+        app.logger.error(f"❌ interrogator runtime error")
 
     return interrogator_prompt
 
-def load_prompt_data(input_image, slug):
+def load_prompt_data(input_image, slug="", prompt_text=""):
 
     sd_run = [
         r for r in config["runs"]
         if r["enabled"]
     ][0]
 
-    prompt = [
+    available_prompts = [
         p for p in config["prompts"]
         if p["enabled"] and p["slug_id"] == slug
-    ][0]
+    ]
+    if len(available_prompts) == 0:
+        if len(prompt_text) > 0:
+            prompt = {
+                "slug_id": "forced_prompt",
+                "positive": prompt_text
+            }
+        else:
+            return None
+    else:
+        prompt = available_prompts[0]
 
+    app.logger.info(prompt)
     # populate prompt_data with sd_run
     prompt_data = sd_run["params"]
     prompt_data["prompt"] = ""
@@ -178,8 +188,8 @@ def load_prompt_data(input_image, slug):
 @app.route("/gen", methods=['POST'])
 def gen_image():
 
-    if 'image' not in request.files or \
-       'prompt' not in request.values:
+    if 'image' not in request.files:
+        app.logger.info(request)
         return "Bad Request", 400
 
     input_image = request.files['image']
@@ -199,9 +209,15 @@ def gen_image():
     resized_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resized_filename)
     resized_image.save(resized_filepath)
 
-    slug = request.values["prompt"]
+    if "prompt" in request.values:
+        slug = request.values["prompt"]
+        prompt_data = load_prompt_data(resized_image, slug=slug)
+    if "prompt-text" in request.values:
+        prompt_text = request.values["prompt-text"]
+        prompt_data = load_prompt_data(resized_image, prompt_text=prompt_text)
 
-    prompt_data = load_prompt_data(resized_image, slug)
+    if prompt_data is None:
+        return "Prompt slug not found", 404
 
     try:
 
@@ -218,7 +234,7 @@ def gen_image():
             prompt_data,
             False
         )
-        print(response)
+        app.logger.info(response)
 
         response_filename = input_filename.replace(".jpg", "_response.png")
         response_filepath = os.path.join(app.config['UPLOAD_FOLDER'], response_filename)
@@ -233,6 +249,10 @@ def gen_image():
     except RuntimeError as e:
         traceback.print_exc()
         return "Internal Server Error", 500
+
+@app.route("/prompts")
+def prompts():
+    return jsonify(config["prompts"])
 
 @app.route("/keep")
 def publish_image():
@@ -254,7 +274,7 @@ def publish_image():
         subprocess.run(['git', 'add', destination_path], check=True)
         subprocess.run(['git', 'commit', '-m', "publish: add latest response"], check=True)
         subprocess.run(['git', 'push', 'origin'], check=True)
-    except:
-        print("error while keeping latest generated image inside git repository")
+    except Exception as e:
+        app.logger.error("error while keeping latest generated image inside git repository: %s", e)
 
     return f"https://raw.githubusercontent.com/alx/api-call-matrix/refs/heads/main/gallery/{filename}"
