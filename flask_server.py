@@ -103,7 +103,7 @@ def process_interrogator(
 
     return interrogator_prompt
 
-def load_prompt_data(input_image, slug="", prompt_text=""):
+def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=1024):
 
     sd_run = [
         r for r in config["runs"]
@@ -130,6 +130,9 @@ def load_prompt_data(input_image, slug="", prompt_text=""):
     prompt_data = sd_run["params"]
     prompt_data["prompt"] = ""
     prompt_data["negative_prompt"] = ""
+
+    prompt_data["width"] = width
+    prompt_data["height"] = height
 
     if "positive" in prompt:
         prompt_data["prompt"] = prompt["positive"]
@@ -199,22 +202,52 @@ def gen_image():
     input_image.save(input_filepath)
 
     resized_image = Image.open(input_filepath).convert("RGB")
+    width, height = resized_image.size
+    app.logger.info(f"Dimensions: {width}x{height}")
+    result_width=1024
+    result_height = 1024
 
-    # input_image is 960x720
-    # 1. center crop to get a 720x720 image size
-    # 2. resize image to 1024x1024
-    resized_image = resized_image.crop(((960-720)//2, 0, (960+720)//2, 720))
-    resized_image = resized_image.resize((1024, 1024))
+    if width == 960 and height == 720:
+        # Portable webcam setup
+        # Center crop to get a 720x720 image size
+        left = (width - 720) // 2
+        top = 0
+        right = (width + 720) // 2
+        bottom = 720
+        resized_image = resized_image.crop((left, top, right, bottom))
+    elif width == 720 and height == 1280:
+        # Telegram bot setup - portrait
+        app.logger.info("Telegram - portrait")
+        result_width = 768
+        result_height = 1344
+    elif width == 1280 and height == 720:
+        # Telegram bot setup - landscape
+        app.logger.info("Telegram - landscape")
+        result_width = 1344
+        result_height = 768
+    else:
+        raise ValueError(f"Unexpected image dimensions: {width}x{height}")
+
+    resized_image = resized_image.resize((result_width, result_height))
     resized_filename = input_filename.replace(".jpg", "_resized.jpg")
     resized_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resized_filename)
     resized_image.save(resized_filepath)
 
     if "prompt" in request.values:
-        slug = request.values["prompt"]
-        prompt_data = load_prompt_data(resized_image, slug=slug)
+        prompt_data = load_prompt_data(
+            resized_image,
+            slug=request.values["prompt"],
+            width=result_width,
+            height=result_height
+        )
+
     if "prompt-text" in request.values:
-        prompt_text = request.values["prompt-text"]
-        prompt_data = load_prompt_data(resized_image, prompt_text=prompt_text)
+        prompt_data = load_prompt_data(
+            resized_image,
+            prompt_text=request.values["prompt-text"],
+            width=result_width,
+            height=result_height
+        )
 
     if prompt_data is None:
         return "Prompt slug not found", 404
