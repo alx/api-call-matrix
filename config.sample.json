@@ -15,6 +15,20 @@
     "positive": "sticker",
     "negative": "white background",
 
+    "telegram_bot": {
+        "api_url": "http://localhost:5000",
+        "api_methods": {
+            "gen": "/gen",
+            "prompts": "/prompts"
+        },
+        "api_method": "/gen",
+        "bot_token": "BOT_TOKEN_FROM_BOTFATHER",
+        "messages": {
+            "welcome": "Welcome to the Image Processing Bot! 👋\n\n\nTo use this bot:\n1. Send an image with a text description\n2. The text will be used as a prompt for image processing\n3. You'll receive the processed image back\n\n\nNote: Make sure to always include both an image and text in your message!",
+            "info": ""
+        }
+    },
+
     "prompts": [
         {
             "slug_id": "3d-model-spiderman",
