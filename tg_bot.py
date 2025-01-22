@@ -3,6 +3,7 @@
 import logging
 import json
 import os
+import exif
 from typing import Optional
 from aiohttp import ClientSession, FormData
 from telegram import Update
@@ -109,21 +110,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     is_online = await is_api_online()
     if not is_online:
         await update.message.reply_text(
-            "API server is not online"
+            "❌ API server is not online"
         )
         return
 
     # Check if message contains an image
     if not update.message.photo:
         await update.message.reply_text(
-            "Please send an image along with your text prompt!"
+            "🖼️ Please send an image along with your text prompt!"
         )
         return
 
     # Check if message contains text
     if not update.message.caption:
         await update.message.reply_text(
-            "Please include a text description with your image!"
+            "🖹 Please include a text description with your image!"
         )
         return
 
@@ -133,7 +134,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Send "processing" message
     processing_msg = await update.message.reply_text(
-        "Processing your image... Please wait."
+        "📇 Processing your image... Please wait."
     )
 
     try:
@@ -143,12 +144,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Process the image
         result_image = await process_image_with_api(photo_bytes, prompt)
+        exif_image = exif.Image(result_image)
+
+        response_caption = "Here's your processed image!"
+        if exif_image.has_exif and "prompt" in dir(exif_image):
+            response_caption = f"prompt: exif_image['prompt']"
 
         if result_image:
             # Send the processed image back
             await update.message.reply_photo(
                 result_image,
-                caption="Here's your processed image!"
+                caption=response_caption
             )
         else:
             await update.message.reply_text(
