@@ -144,10 +144,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Process the image
         result_image = await process_image_with_api(photo_bytes, prompt)
-        exif_image = exif.Image(result_image)
-
         response_caption = "Here's your processed image!"
+
         # TODO read prompt from exif data
+        # exif_image = exif.Image(result_image)
         # if exif_image.has_exif and "prompt" in dir(exif_image):
         #     response_caption = exif_image['prompt']
 
