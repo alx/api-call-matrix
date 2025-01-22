@@ -147,8 +147,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         exif_image = exif.Image(result_image)
 
         response_caption = "Here's your processed image!"
-        if exif_image.has_exif and "prompt" in dir(exif_image):
-            response_caption = exif_image['prompt']
+        # TODO read prompt from exif data
+        # if exif_image.has_exif and "prompt" in dir(exif_image):
+        #     response_caption = exif_image['prompt']
 
         if result_image:
             # Send the processed image back

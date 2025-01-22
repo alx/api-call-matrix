@@ -277,10 +277,11 @@ def gen_image():
         response_filepath = os.path.join(app.config['UPLOAD_FOLDER'], response_filename)
         response.images[0].save(response_filepath)
 
-        with open(response_filepath, 'wb') as image_file:
-            exif_image = exif.Image(image_file)
-            exif_image["prompt"] = prompt_data["positive"]
-            exif_image.write(exif_image.get_file())
+        # TODO save prompt inside exif data
+        # with open(response_filepath, 'wb') as image_file:
+        #     exif_image = exif.Image(image_file)
+        #     exif_image["prompt"] = prompt_data["positive"]
+        #     exif_image.write(exif_image.get_file())
 
         return send_from_directory(
             app.config['UPLOAD_FOLDER'],
