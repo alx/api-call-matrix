@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
-import io
 import itertools
-import base64
 import traceback
 import datetime
 
@@ -11,6 +9,7 @@ import webuiapi
 from webuiapi import b64_img, raw_b64_img
 
 from PIL import Image
+import exif
 
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -277,6 +276,11 @@ def gen_image():
         response_filename = input_filename.replace(".jpg", "_response.png")
         response_filepath = os.path.join(app.config['UPLOAD_FOLDER'], response_filename)
         response.images[0].save(response_filepath)
+
+        with open(response_filepath, 'wb') as image_file:
+            exif_image = exif.Image(image_file)
+            exif_image["prompt"] = prompt_data["positive"]
+            exif_image.write(exif_image.get_file())
 
         return send_from_directory(
             app.config['UPLOAD_FOLDER'],
