@@ -177,7 +177,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         interrogator_prompt = await interrogate_image_with_api(photo_bytes)
 
         if client:
-
             message_content = [
                 "You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n",
                 "You will receive two inputs:\n",
@@ -215,6 +214,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "</stable_diffusion_prompt>\n",
                 "Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image."
             ]
+            await update.message.reply_text(
+                "".join(message_content)
+            )
             # ask Claude to build prompt,
             message = client.messages.create(
                 max_tokens=1024,
