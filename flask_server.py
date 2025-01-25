@@ -142,15 +142,6 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
     if "negative" in sd_run:
         prompt_data["negative_prompt"] += sd_run["negative"]
 
-    if "interrogator" in config["api"]:
-
-        interrogator_prompt = process_interrogator(input_image)
-
-        prompt_data["prompt"] = ",".join([
-            interrogator_prompt,
-            prompt_data["prompt"]
-        ])
-
     controlnet_units = []
     for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
 
@@ -186,21 +177,8 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
 
     return prompt_data
 
-@app.route("/interrogate", methods=['POST'])
-def interrogate_image():
-    if 'image' not in request.files:
-        return "Bad Request", 400
-    input_image = request.files['image']
-    interrogator_prompt = process_interrogator(input_image)
-    return interrogator_prompt
+def get_resized_image_file(input_image):
 
-@app.route("/gen", methods=['POST'])
-def gen_image():
-
-    if 'image' not in request.files:
-        return "Bad Request", 400
-
-    input_image = request.files['image']
     input_filename = secure_filename(input_image.filename)
     input_filename = input_filename.replace(".jpg", datetime.datetime.now().strftime("_%Y-%m-%d_%H-%M-%S.jpg"))
     input_filepath = os.path.join(app.config['UPLOAD_FOLDER'], input_filename)
@@ -246,20 +224,40 @@ def gen_image():
     resized_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resized_filename)
     resized_image.save(resized_filepath)
 
+    return resized_image, new_width, new_height
+
+@app.route("/interrogate", methods=['POST'])
+def interrogate_image():
+    if 'image' not in request.files:
+        return "Bad Request", 400
+    input_image = request.files['image']
+    resized_image, width, height = get_resized_image_file(input_image)
+    interrogator_prompt = process_interrogator(resized_image)
+    return interrogator_prompt
+
+@app.route("/gen", methods=['POST'])
+def gen_image():
+
+    if 'image' not in request.files:
+        return "Bad Request", 400
+
+    input_image = request.files['image']
+    resized_image, width, height = get_resized_image_file(input_image)
+
     if "prompt" in request.values:
         prompt_data = load_prompt_data(
             resized_image,
             slug=request.values["prompt"],
-            width=new_width,
-            height=new_height
+            width=width,
+            height=height
         )
 
     if "prompt-text" in request.values:
         prompt_data = load_prompt_data(
             resized_image,
             prompt_text=request.values["prompt-text"],
-            width=new_width,
-            height=new_height
+            width=width,
+            height=height
         )
 
     if prompt_data is None:
