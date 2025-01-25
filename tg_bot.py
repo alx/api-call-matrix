@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import traceback
 import logging
 import json
 import os
@@ -272,6 +272,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     except Exception as e:
         logger.error(f"Error handling message: {e}")
+        logger.error(traceback.format_exc())
         await update.message.reply_text(
             "Sorry, something went wrong. Please try again later."
         )
