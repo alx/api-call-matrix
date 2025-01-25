@@ -229,16 +229,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 api_call_prompt = match.group(1).strip()
             else:
                 raise ValueError("No stable_diffusion_prompt found in the content")
-
-            # Delete the processing message
-            await processing_msg.delete()
-            # Send "prompt" message
-            prompt_msg = await update.message.reply_text(
-                f"📇 Processing your image... generated prompt: {api_call_prompt}"
-            )
         else:
             api_call_prompt = f"{legend}, {interrogator_prompt}"
 
+
+        # Delete the processing message
+        await processing_msg.delete()
+        # Send "prompt" message
+        prompt_msg = await update.message.reply_text(
+            f"📇 Processing your image using this prompt: {api_call_prompt}"
+        )
 
         result_image = await process_image_with_api(photo_bytes, api_call_prompt)
 
