@@ -183,7 +183,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 messages=[
                     {
                         "role": "user",
-                        "content": (f"You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n"
+                        "content": str((f"You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n"
     f"You will receive two inputs:\n"
     f"<photo>\n"
     f"{interrogator_prompt}\n"
@@ -218,10 +218,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     f"<stable_diffusion_prompt>\n"
     f"[Your generated Stable Diffusion prompt]\n"
     f"</stable_diffusion_prompt>\n"
-    f"Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image.\n")
+    f"Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image.\n"))
                     }
                 ],
                 model="claude-3-5-sonnet-latest",
+            )
+            await update.message.reply_text(
+                message.content
             )
             pattern = r'<stable_diffusion_prompt>(.*?)</stable_diffusion_prompt>'
             match = re.search(pattern, message.content, re.DOTALL)
@@ -248,12 +251,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         #     response_caption = exif_image['prompt']
 
         if result_image:
+            # Delete the prompt message
+            await prompt_msg.delete()
             # Send the processed image back
             await update.message.reply_photo(
                 result_image,
                 caption=api_call_prompt
             )
         else:
+            # Delete the prompt message
+            await prompt_msg.delete()
             await update.message.reply_text(
                 "Sorry, there was an error processing your image. Please try again later."
             )
@@ -263,10 +270,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             "Sorry, something went wrong. Please try again later."
         )
-
-    finally:
-        # Delete the prompt message
-        await prompt_msg.delete()
 
 def main() -> None:
     """Start the bot."""
