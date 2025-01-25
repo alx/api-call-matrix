@@ -181,10 +181,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n",
                 "You will receive two inputs:\n",
                 "<photo>\n",
-                f"{interrogator_prompt}\n",
+                interrogator_prompt,
                 "</photo>\n",
                 "<legend>\n",
-                f"{legend}\n",
+                legend,
                 "</legend>\n",
                 "Follow these steps to process the inputs and generate a Stable Diffusion prompt:\n",
                 "1. Analyze the photo:\n",
@@ -218,25 +218,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "".join(message_content)
             )
             # ask Claude to build prompt,
-            message = client.messages.create(
-                max_tokens=1024,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": "".join(message_content)
-                    }
-                ],
-                model="claude-3-5-sonnet-latest",
-            )
-            await update.message.reply_text(
-                message.content
-            )
-            pattern = r'<stable_diffusion_prompt>(.*?)</stable_diffusion_prompt>'
-            match = re.search(pattern, message.content, re.DOTALL)
-            if match:
-                api_call_prompt = match.group(1).strip()
-            else:
-                raise ValueError("No stable_diffusion_prompt found in the content")
+            try:
+                message = client.messages.create(
+                    max_tokens=1024,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": str("".join(message_content))
+                        }
+                    ],
+                    model="claude-3-5-sonnet-latest",
+                )
+                logger.info(message)
+                logger.info(message.content)
+                await update.message.reply_text(
+                    message.content
+                )
+                pattern = r'<stable_diffusion_prompt>(.*?)</stable_diffusion_prompt>'
+                match = re.search(pattern, message.content, re.DOTALL)
+                if match:
+                    api_call_prompt = match.group(1).strip()
+                else:
+                    raise ValueError("No stable_diffusion_prompt found in the content")
+            except Exception as e:
+                logger.error(f"Error during anthropic request: {e}")
+                logger.error(traceback.format_exc())
+                api_call_prompt = f"{legend}, {interrogator_prompt}"
         else:
             api_call_prompt = f"{legend}, {interrogator_prompt}"
 
