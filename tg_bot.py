@@ -177,48 +177,51 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         interrogator_prompt = await interrogate_image_with_api(photo_bytes)
 
         if client:
-            # ask Claude to build prompt
+
+            message_content = [
+                "You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n",
+                "You will receive two inputs:\n",
+                "<photo>\n",
+                "{interrogator_prompt}\n",
+                "</photo>\n",
+                "<legend>\n",
+                "{legend}\n",
+                "</legend>\n",
+                "Follow these steps to process the inputs and generate a Stable Diffusion prompt:\n",
+                "1. Analyze the photo:\n",
+                "   - Describe the main elements, subjects, and overall composition of the image.\n",
+                "   - Note any distinctive features, colors, or styles present in the photo.\n",
+                "2. Interpret the legend:\n",
+                "   - Identify key words, themes, or concepts mentioned in the legend.\n",
+                "   - Determine the mood, tone, or atmosphere suggested by the text.\n",
+                "3. Combine photo analysis and legend interpretation:\n",
+                "   - Find connections between the visual elements in the photo and the ideas expressed in the legend.\n",
+                "   - Identify aspects of the photo that could be enhanced or modified based on the legend.\n",
+                "4. Generate a Stable Diffusion prompt:\n",
+                "   - Start with a clear description of the main subject or scene from the original photo.\n",
+                "   - Incorporate elements from the legend to guide the modification or enhancement of the image.\n",
+                "   - Use specific, descriptive language to convey the desired style, mood, and visual elements.\n",
+                "   - Include any relevant artistic styles, techniques, or references that align with the legend and original photo.\n",
+                "5. Refine and optimize the prompt:\n",
+                "   - Ensure the prompt is clear, concise, and focused.\n",
+                "   - Use Stable Diffusion-friendly terminology and structure.\n",
+                "   - Balance faithfulness to the original photo with creative interpretation of the legend.\n",
+                "Provide your output in the following format:\n",
+                "<analysis>\n",
+                "[Your analysis of the photo and legend]\n",
+                "</analysis>\n",
+                "<stable_diffusion_prompt>\n",
+                "[Your generated Stable Diffusion prompt]\n",
+                "</stable_diffusion_prompt>\n",
+                "Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image."
+            ]
+            # ask Claude to build prompt,
             message = client.messages.create(
                 max_tokens=1024,
                 messages=[
                     {
                         "role": "user",
-                        "content": str((f"You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n"
-    f"You will receive two inputs:\n"
-    f"<photo>\n"
-    f"{interrogator_prompt}\n"
-    f"</photo>\n"
-    f"<legend>\n"
-    f"{legend}\n"
-    f"</legend>\n"
-    f"Follow these steps to process the inputs and generate a Stable Diffusion prompt:\n"
-    f"1. Analyze the photo:\n"
-    f"   - Describe the main elements, subjects, and overall composition of the image.\n"
-    f"   - Note any distinctive features, colors, or styles present in the photo.\n"
-    f"\n"
-    f"2. Interpret the legend:\n"
-    f"   - Identify key words, themes, or concepts mentioned in the legend.\n"
-    f"   - Determine the mood, tone, or atmosphere suggested by the text.\n"
-    f"3. Combine photo analysis and legend interpretation:\n"
-    f"   - Find connections between the visual elements in the photo and the ideas expressed in the legend.\n"
-    f"   - Identify aspects of the photo that could be enhanced or modified based on the legend.\n"
-    f"4. Generate a Stable Diffusion prompt:\n"
-    f"   - Start with a clear description of the main subject or scene from the original photo.\n"
-    f"   - Incorporate elements from the legend to guide the modification or enhancement of the image.\n"
-    f"   - Use specific, descriptive language to convey the desired style, mood, and visual elements.\n"
-    f"   - Include any relevant artistic styles, techniques, or references that align with the legend and original photo.\n"
-    f"5. Refine and optimize the prompt:\n"
-    f"   - Ensure the prompt is clear, concise, and focused.\n"
-    f"   - Use Stable Diffusion-friendly terminology and structure.\n"
-    f"   - Balance faithfulness to the original photo with creative interpretation of the legend.\n"
-    f"Provide your output in the following format:\n"
-    f"<analysis>\n"
-    f"[Your analysis of the photo and legend]\n"
-    f"</analysis>\n"
-    f"<stable_diffusion_prompt>\n"
-    f"[Your generated Stable Diffusion prompt]\n"
-    f"</stable_diffusion_prompt>\n"
-    f"Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image.\n"))
+                        "content": "".join(message_content)
                     }
                 ],
                 model="claude-3-5-sonnet-latest",
