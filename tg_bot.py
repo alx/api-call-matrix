@@ -232,10 +232,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 logger.info(message)
                 logger.info(message.content)
                 await update.message.reply_text(
-                    message.content
+                    str(message.content[0])
                 )
                 pattern = r'<stable_diffusion_prompt>(.*?)</stable_diffusion_prompt>'
-                match = re.search(pattern, message.content, re.DOTALL)
+                match = re.search(pattern, str(message.content[0]), re.DOTALL)
                 if match:
                     api_call_prompt = match.group(1).strip()
                 else:
