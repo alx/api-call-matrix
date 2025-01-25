@@ -4,6 +4,7 @@ import logging
 import json
 import os
 import exif
+import re
 from typing import Optional
 from aiohttp import ClientSession, FormData
 from telegram import Update
@@ -14,6 +15,8 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
+from anthropic import Anthropic
+
 
 # Enable logging
 logging.basicConfig(
@@ -36,6 +39,9 @@ def load_config(config_file="config.json"):
     return config["telegram_bot"]
 
 config = load_config()
+client = None
+if "ANTHROPIC_API_KEY" in config:
+    client = Anthropic(api_key=config["ANTHROPIC_API_KEY"])
 
 async def is_api_online() -> bool:
     try:
@@ -74,6 +80,31 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     f"Welcome {new_member.mention_html()}!\n\n{config['messages']['welcome']}",
                     parse_mode='HTML'
                 )
+
+async def interrogate_image_with_api(image_data: bytes) -> Optional[str]:
+    """Send image to API and get interrogator result."""
+    try:
+        async with ClientSession() as session:
+            prompt_data = FormData()
+            prompt_data.add_field(
+                'image',
+                image_data,
+                filename='telegram_image.jpg'
+            )
+            interrogate_url = f"{config['api_url']}{config['api_methods']['interrogate']}"
+            async with session.post(
+                interrogate_url,
+                data=prompt_data
+            ) as response:
+                if response.status == 404:
+                    return "Sorry this api call is not available"
+                if response.status == 200:
+                    return await response.read()
+                logger.error(f"API request failed with status {response.status}")
+                return None
+    except Exception as e:
+        logger.error(f"Error processing image with API: {e}")
+        return None
 
 async def process_image_with_api(image_data: bytes, prompt: str) -> Optional[bytes]:
     """Send image and prompt to API and get processed image back."""
@@ -130,7 +161,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Get the largest version of the photo
     photo = update.message.photo[-1]
-    prompt = update.message.caption
+    legend = update.message.caption
 
     # Send "processing" message
     processing_msg = await update.message.reply_text(
@@ -142,9 +173,74 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         photo_file = await context.bot.get_file(photo.file_id)
         photo_bytes = await photo_file.download_as_bytearray()
 
-        # Process the image
-        result_image = await process_image_with_api(photo_bytes, prompt)
-        response_caption = "Here's your processed image!"
+        # interrogate the image
+        interrogator_prompt = await interrogate_image_with_api(photo_bytes)
+
+        if client:
+            # ask Claude to build prompt
+            message = client.messages.create(
+                max_tokens=1024,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (f"You are an AI assistant tasked with processing messages from a Telegram channel and generating Stable Diffusion prompts based on the content. Each message contains a photo and a legend. Your job is to analyze both elements and create a prompt that will modify the original photo using Stable Diffusion.\n"
+    f"You will receive two inputs:\n"
+    f"<photo>\n"
+    f"{interrogator_prompt}\n"
+    f"</photo>\n"
+    f"<legend>\n"
+    f"{legend}\n"
+    f"</legend>\n"
+    f"Follow these steps to process the inputs and generate a Stable Diffusion prompt:\n"
+    f"1. Analyze the photo:\n"
+    f"   - Describe the main elements, subjects, and overall composition of the image.\n"
+    f"   - Note any distinctive features, colors, or styles present in the photo.\n"
+    f"\n"
+    f"2. Interpret the legend:\n"
+    f"   - Identify key words, themes, or concepts mentioned in the legend.\n"
+    f"   - Determine the mood, tone, or atmosphere suggested by the text.\n"
+    f"3. Combine photo analysis and legend interpretation:\n"
+    f"   - Find connections between the visual elements in the photo and the ideas expressed in the legend.\n"
+    f"   - Identify aspects of the photo that could be enhanced or modified based on the legend.\n"
+    f"4. Generate a Stable Diffusion prompt:\n"
+    f"   - Start with a clear description of the main subject or scene from the original photo.\n"
+    f"   - Incorporate elements from the legend to guide the modification or enhancement of the image.\n"
+    f"   - Use specific, descriptive language to convey the desired style, mood, and visual elements.\n"
+    f"   - Include any relevant artistic styles, techniques, or references that align with the legend and original photo.\n"
+    f"5. Refine and optimize the prompt:\n"
+    f"   - Ensure the prompt is clear, concise, and focused.\n"
+    f"   - Use Stable Diffusion-friendly terminology and structure.\n"
+    f"   - Balance faithfulness to the original photo with creative interpretation of the legend.\n"
+    f"Provide your output in the following format:\n"
+    f"<analysis>\n"
+    f"[Your analysis of the photo and legend]\n"
+    f"</analysis>\n"
+    f"<stable_diffusion_prompt>\n"
+    f"[Your generated Stable Diffusion prompt]\n"
+    f"</stable_diffusion_prompt>\n"
+    f"Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image.\n")
+                    }
+                ],
+                model="claude-3-5-sonnet-latest",
+            )
+            pattern = r'<stable_diffusion_prompt>(.*?)</stable_diffusion_prompt>'
+            match = re.search(pattern, message.content, re.DOTALL)
+            if match:
+                api_call_prompt = match.group(1).strip()
+            else:
+                raise ValueError("No stable_diffusion_prompt found in the content")
+
+            # Delete the processing message
+            await processing_msg.delete()
+            # Send "prompt" message
+            prompt_msg = await update.message.reply_text(
+                f"📇 Processing your image... generated prompt: {api_call_prompt}"
+            )
+        else:
+            api_call_prompt = f"{legend}, {interrogator_prompt}"
+
+
+        result_image = await process_image_with_api(photo_bytes, api_call_prompt)
 
         # TODO read prompt from exif data
         # exif_image = exif.Image(result_image)
@@ -155,7 +251,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             # Send the processed image back
             await update.message.reply_photo(
                 result_image,
-                caption=response_caption
+                caption=api_call_prompt
             )
         else:
             await update.message.reply_text(
@@ -169,8 +265,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
     finally:
-        # Delete the processing message
-        await processing_msg.delete()
+        # Delete the prompt message
+        await prompt_msg.delete()
 
 def main() -> None:
     """Start the bot."""
