@@ -224,7 +224,7 @@ def get_resized_image_file(input_image):
     resized_filepath = os.path.join(app.config['UPLOAD_FOLDER'], resized_filename)
     resized_image.save(resized_filepath)
 
-    return resized_image, new_width, new_height
+    return resized_image, input_filename, new_width, new_height
 
 @app.route("/interrogate", methods=['POST'])
 def interrogate_image():
@@ -242,7 +242,7 @@ def gen_image():
         return "Bad Request", 400
 
     input_image = request.files['image']
-    resized_image, width, height = get_resized_image_file(input_image)
+    resized_image, input_filename, width, height = get_resized_image_file(input_image)
 
     if "prompt" in request.values:
         prompt_data = load_prompt_data(
