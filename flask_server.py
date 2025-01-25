@@ -186,6 +186,14 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
 
     return prompt_data
 
+@app.route("/interrogate", methods=['POST'])
+def interrogate_image():
+    if 'image' not in request.files:
+        return "Bad Request", 400
+    input_image = request.files['image']
+    interrogator_prompt = process_interrogator(input_image)
+    return interrogator_prompt
+
 @app.route("/gen", methods=['POST'])
 def gen_image():
 
