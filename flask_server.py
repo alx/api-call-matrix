@@ -186,15 +186,20 @@ def get_resized_image_file(input_image):
 
     resized_image = Image.open(input_filepath).convert("RGB")
     width, height = resized_image.size
+    is_square = width == height
     is_landscape = width > height
 
     # Calculate target dimensions
-    if is_landscape:
-        target_width = 1344
-        target_height = 768
+    if is_square:
+        target_width = 1024
+        target_height = 1024
     else:
-        target_width = 768
-        target_height = 1344
+        if is_landscape:
+            target_width = 1344
+            target_height = 768
+        else:
+            target_width = 768
+            target_height = 1344
 
     # Calculate aspect ratios
     aspect_ratio = width / height
