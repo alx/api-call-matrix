@@ -136,6 +136,10 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
         prompt_data["prompt"] = prompt["positive"]
     if "positive" in sd_run:
         prompt_data["prompt"] += sd_run["positive"]
+    if "positive_prefix" in sd_run:
+        prompt_data["prompt"] = sd_run["positive_prefix"] + prompt_data["prompt"]
+    if "positive_suffix" in sd_run:
+        prompt_data["prompt"] = prompt_data["prompt"] + sd_run["positive_suffix"]
 
     if "negative" in prompt:
         prompt_data["negative_prompt"] = prompt["negative"]
