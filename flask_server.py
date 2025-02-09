@@ -244,7 +244,7 @@ def interrogate_image():
     if 'image' not in request.files:
         return "Bad Request", 400
     input_image = request.files['image']
-    resized_image, width, height = get_resized_image_file(input_image)
+    resized_image, input_filename, width, height = get_resized_image_file(input_image)
     interrogator_prompt = process_interrogator(resized_image)
     return interrogator_prompt
 
