@@ -246,15 +246,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         else:
             api_call_prompt = f"{legend}, {interrogator_prompt}"
 
-        # Delete the processing message
-        await processing_msg.delete()
-
         # Send "prompt" message, keep prompt_msg to delete it later
         # prompt_msg = await update.message.reply_text(
         #     f"📇 Processing your image using this prompt: {api_call_prompt}"
         # )
 
         result_image = await process_image_with_api(photo_bytes, api_call_prompt)
+        await processing_msg.delete()
 
         # TODO read prompt from exif data
         # exif_image = exif.Image(result_image)
@@ -265,7 +263,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # await prompt_msg.delete()
 
         if result_image:
-            # Send the processed image back
             await update.message.reply_photo(
                 result_image,
                 caption=api_call_prompt.replace('\n', '')
