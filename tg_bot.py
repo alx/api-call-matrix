@@ -152,13 +152,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return
 
-    # Check if message contains text
-    if not update.message.caption:
-        await update.message.reply_text(
-            "🖹 Please include a text description with your image!"
-        )
-        return
-
     # Get the largest version of the photo
     photo = update.message.photo[-1]
     legend = update.message.caption
@@ -214,9 +207,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "</stable_diffusion_prompt>\n",
                 "Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image."
             ]
-            await update.message.reply_text(
-                "".join(message_content)
-            )
+
+            # DEBUG:
+            #await update.message.reply_text(
+            #    "".join(message_content)
+            #)
+
             # ask Claude to build prompt,
             try:
                 message = client.messages.create(
@@ -229,11 +225,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     ],
                     model="claude-3-5-sonnet-latest",
                 )
+
                 logger.info(message)
                 logger.info(message.content)
-                await update.message.reply_text(
-                    str(message.content[0])
-                )
+
+                # await update.message.reply_text(
+                #     str(message.content[0])
+                # )
+
                 pattern = r'<stable_diffusion_prompt>(.*?)</stable_diffusion_prompt>'
                 match = re.search(pattern, str(message.content[0]), re.DOTALL)
                 if match:
@@ -247,13 +246,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         else:
             api_call_prompt = f"{legend}, {interrogator_prompt}"
 
-
         # Delete the processing message
         await processing_msg.delete()
-        # Send "prompt" message
-        prompt_msg = await update.message.reply_text(
-            f"📇 Processing your image using this prompt: {api_call_prompt}"
-        )
+
+        # Send "prompt" message, keep prompt_msg to delete it later
+        # prompt_msg = await update.message.reply_text(
+        #     f"📇 Processing your image using this prompt: {api_call_prompt}"
+        # )
 
         result_image = await process_image_with_api(photo_bytes, api_call_prompt)
 
@@ -262,17 +261,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # if exif_image.has_exif and "prompt" in dir(exif_image):
         #     response_caption = exif_image['prompt']
 
+        # Delete the prompt message
+        # await prompt_msg.delete()
+
         if result_image:
-            # Delete the prompt message
-            await prompt_msg.delete()
             # Send the processed image back
             await update.message.reply_photo(
                 result_image,
-                caption=api_call_prompt
+                caption=api_call_prompt.replace('\n', '')
             )
         else:
-            # Delete the prompt message
-            await prompt_msg.delete()
             await update.message.reply_text(
                 "Sorry, there was an error processing your image. Please try again later."
             )
