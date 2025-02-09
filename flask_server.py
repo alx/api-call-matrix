@@ -147,13 +147,17 @@ def load_prompt_data(input_image, slug="", prompt_text="", width=1024, height=10
         prompt_data["negative_prompt"] += sd_run["negative"]
 
     controlnet_units = []
-    for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
+    if "alwayson_scripts" in prompt_data:
+        if "ControlNet" in prompt_data["alwayson_scripts"]:
+            if "args" in prompt_data["alwayson_scripts"]["ControlNet"]:
 
-        # replace placeholder in prompt_data controlnets
-        if "image" in control:
-            control["image"] = raw_b64_img(input_image)
+                for control in prompt_data["alwayson_scripts"]["ControlNet"]["args"]:
 
-        controlnet_units.append(control)
+                    # replace placeholder in prompt_data controlnets
+                    if "image" in control:
+                        control["image"] = raw_b64_img(input_image)
+
+                    controlnet_units.append(control)
 
     prompt_data["controlnet_units"] = controlnet_units
 
