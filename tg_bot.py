@@ -108,9 +108,9 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         is_online = await is_api_online()
         if is_online:
-            reply_text += f"\n\n- API service available"
+            reply_text += "\n\n✅ API service available"
         else:
-            reply_text += f"\n\n- API service offline"
+            reply_text += "\n\n❌ API service offline"
 
         await update.message.reply_text(reply_text)
 
