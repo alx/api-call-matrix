@@ -5,18 +5,21 @@ import json
 import os
 import exif
 import re
+import sqlite3
 from typing import Optional
 from aiohttp import ClientSession, FormData
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
     filters,
     ContextTypes,
+    CallbackQueryHandler
 )
 from anthropic import Anthropic
 
+CURRENT_MESSAGE_ID = None
 
 # Enable logging
 logging.basicConfig(
