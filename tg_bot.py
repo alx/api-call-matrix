@@ -46,6 +46,22 @@ client = None
 if "ANTHROPIC_API_KEY" in config:
     client = Anthropic(api_key=config["ANTHROPIC_API_KEY"])
 
+# Database setup
+def setup_database():
+    conn = sqlite3.connect('bot_data.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS image_data (
+        message_id INTEGER PRIMARY KEY,
+        photo_file_id TEXT,
+        legend TEXT,
+        likes INTEGER DEFAULT 0
+    )
+    ''')
+    conn.commit()
+    conn.close()
+
+setup_database()
 async def is_api_online() -> bool:
     try:
         async with ClientSession() as session:
