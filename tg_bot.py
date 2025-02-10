@@ -328,7 +328,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     save_image_data(CURRENT_MESSAGE_ID, current_photo_file_id, current_legend)
 
     # process image
-    process_image(update, context, current_photo_file_id, current_legend)
+    await process_image(update, context, current_photo_file_id, current_legend)
 
 async def regen_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -358,7 +358,7 @@ async def regen_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             raise ValueError(f"No message found with message_id {message_id}")
 
         photo_file_id, legend = result
-        process_image(update, context, photo_file_id, legend)
+        await process_image(update, context, photo_file_id, legend)
 
     except ValueError:
         await update.message.reply_text("Invalid message ID. Please provide a valid number.")
@@ -439,7 +439,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         legend = data[2]
 
         # process image
-        process_image(update, context, photo_file_id, legend)
+        await process_image(update, context, photo_file_id, legend)
 
     elif action == 'like':
         message_id = int(data[1])
