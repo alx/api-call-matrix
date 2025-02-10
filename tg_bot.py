@@ -91,12 +91,17 @@ async def is_api_online() -> bool:
         logger.error(f"Error checking API url: {e}")
         return False
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send welcome message when the command /start is issued."""
     if update.message:
-        await update.message.reply_text(config["messages"]["welcome"])
+        await update.message.reply_text(config["messages"]["start"])
 
-async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send welcome message when the command /start is issued."""
+    if update.message:
+        await update.message.reply_text(config["messages"]["help"])
+
+async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send info message when the command /info is issued."""
     if update.message:
         reply_text = config["messages"]["info"]
