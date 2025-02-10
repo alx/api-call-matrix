@@ -78,8 +78,10 @@ def save_image_data(message_id: int, photo_file_id: str, legend: Optional[str]):
     INSERT INTO image_data (message_id, photo_file_id, legend)
     VALUES (?, ?, ?)
     ''', (message_id, photo_file_id, legend))
+    row_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    return row_id
 
 async def is_api_online() -> bool:
     try:
@@ -284,11 +286,14 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
         await processing_msg.delete()
 
         if result_image:
-            # Create inline keyboard
+            # Save image data and get the row id
+            row_id = save_image_data(update.message.message_id, file_id, legend)
+
+            # Create inline keyboard with shorter callback data
             keyboard = [
                 [
-                    InlineKeyboardButton("Regenerate", callback_data=f"regen:{file_id}:{legend}"),
-                    InlineKeyboardButton("Like", callback_data=f"like:{update.message.message_id}")
+                    InlineKeyboardButton("Regenerate", callback_data=f"regen:{row_id}"),
+                    InlineKeyboardButton("Like", callback_data=f"like:{row_id}")
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -336,9 +341,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     current_photo_file_id = update.message.photo[-1].file_id
     current_legend = update.message.caption
 
-    # Save parameters in SQLite database with id set to message id
-    save_image_data(CURRENT_MESSAGE_ID, current_photo_file_id, current_legend)
-
     # process image
     try:
         await process_image(update, context, current_photo_file_id, current_legend)
@@ -364,10 +366,15 @@ async def regen_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 await update.message.reply_text("Please provide a valid message ID. Usage: /regen <message_id>")
                 return
 
-        # Fetch the image data from the database
+        query = update.callback_query
+        await query.answer()
+
+        row_id = int(query.data.split(':')[1])
+
+        # Retrieve the original file_id and legend from the database
         conn = sqlite3.connect('bot_data.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT photo_file_id, legend FROM image_data WHERE message_id = ?", (message_id,))
+        cursor.execute('SELECT photo_file_id, legend FROM image_data WHERE rowid = ?', (row_id,))
         result = cursor.fetchone()
 
         if not result:
@@ -384,19 +391,14 @@ async def regen_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     finally:
         conn.close()
 
-def like_message(message_id) -> None:
+def like_message(row_id) -> None:
     try:
         # Fetch the message from the database
         conn = sqlite3.connect('bot_data.db')
         cursor = conn.cursor()
 
         # Add a like counter for each message
-        cursor.execute('''
-        UPDATE image_data
-        SET likes = likes + 1
-        WHERE message_id = ?
-        ''', (message_id,))
-
+        cursor.execute('UPDATE image_data SET likes = likes + 1 WHERE rowid = ?', (row_id,))
         conn.commit()
 
     except Exception as e:
@@ -421,19 +423,18 @@ async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 await update.message.reply_text("Please provide a valid message ID. Usage: /like <message_id>")
                 return
 
-        like_message(message_id)
+        query = update.callback_query
+        await query.answer()
+        row_id = int(query.data.split(':')[1])
+        like_message(row_id)
 
-        # Fetch the updated like count
         conn = sqlite3.connect('bot_data.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT likes FROM image_data WHERE message_id = ?', (message_id,))
-        result = cursor.fetchone()
+        cursor.execute('SELECT likes FROM image_data WHERE rowid = ?', (row_id,))
+        likes = cursor.fetchone()[0]
+        conn.close()
 
-        if result:
-            likes = result[0]
-            await update.message.reply_text(f"👍 Like added! Total likes: {likes}")
-        else:
-            await update.message.reply_text(f"Message with ID {message_id} not found.")
+        await update.message.reply_text(f"👍 Like added! Total likes: {likes}")
 
     except ValueError:
         await update.message.reply_text("Please provide a valid message ID. Usage: /like <message_id>")
@@ -449,17 +450,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     data = query.data.split(':')
     action = data[0]
+    row_id = int(data[1])
 
     if action == 'regen':
-        photo_file_id = data[1]
-        legend = data[2]
+        conn = sqlite3.connect('bot_data.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT photo_file_id, legend FROM image_data WHERE rowid = ?', (row_id,))
+        result = cursor.fetchone()
+        conn.close()
 
-        # process image
-        await process_image(update, context, photo_file_id, legend)
+        if result:
+            file_id, legend = result
+            await process_image(update, context, file_id, legend)
 
     elif action == 'like':
-        message_id = int(data[1])
-        like_message(message_id)
+        like_message(row_id)
 
 def main() -> None:
     """Start the bot."""
