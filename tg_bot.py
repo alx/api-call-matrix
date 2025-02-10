@@ -328,7 +328,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     save_image_data(CURRENT_MESSAGE_ID, current_photo_file_id, current_legend)
 
     # process image
-    await process_image(update, context, current_photo_file_id, current_legend)
+    try:
+        await process_image(update, context, current_photo_file_id, current_legend)
+    except Exception as e:
+        logger.error(f"Error in handle_message: {str(e)}")
+        await update.message.reply_text("An error occurred while processing your request. Please try again later.")
 
 async def regen_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
