@@ -462,7 +462,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         if result:
             file_id, legend = result
-            await process_image(update, context, file_id, legend)
+            await process_image(query, context, file_id, legend)
 
     elif action == 'like':
         like_message(row_id)
@@ -473,7 +473,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         likes = cursor.fetchone()[0]
         conn.close()
 
-        await update.message.reply_text(f"👍 Like added! Total likes: {likes}")
+        await query.message.reply_text(f"👍 Like added! Total likes: {likes}")
 
 def main() -> None:
     """Start the bot."""
