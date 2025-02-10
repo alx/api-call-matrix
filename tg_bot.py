@@ -292,8 +292,8 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
             # Create inline keyboard with shorter callback data
             keyboard = [
                 [
-                    InlineKeyboardButton("Regenerate", callback_data=f"regen:{row_id}"),
-                    InlineKeyboardButton("Like", callback_data=f"like:{row_id}")
+                    InlineKeyboardButton("🔂 Regenerate", callback_data=f"regen:{row_id}"),
+                    InlineKeyboardButton("❤️ Like", callback_data=f"like:{row_id}")
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
