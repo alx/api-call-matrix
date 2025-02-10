@@ -467,6 +467,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif action == 'like':
         like_message(row_id)
 
+        conn = sqlite3.connect('bot_data.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT likes FROM image_data WHERE rowid = ?', (row_id,))
+        likes = cursor.fetchone()[0]
+        conn.close()
+
+        await update.message.reply_text(f"👍 Like added! Total likes: {likes}")
+
 def main() -> None:
     """Start the bot."""
     # Create the Application
