@@ -350,6 +350,43 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # process image
     process_image(update, context, current_photo_file_id, current_legend)
 
+async def regen_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handler for the /regen command. Regenerates an image based on the provided message ID.
+
+    Usage: /regen <message_id>
+    """
+    try:
+        # Extract the message ID from the command arguments
+        message_id = int(context.args[0]) if context.args else None
+
+        if not message_id:
+
+            if CURRENT_MESSAGE_ID is not None:
+                message_id = CURRENT_MESSAGE_ID
+            else:
+                await update.message.reply_text("Please provide a valid message ID. Usage: /regen <message_id>")
+                return
+
+        # Fetch the image data from the database
+        conn = sqlite3.connect('bot_data.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT photo_file_id, legend FROM image_data WHERE message_id = ?", (message_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            raise ValueError(f"No message found with message_id {message_id}")
+
+        photo_file_id, legend = result
+        process_image(update, context, photo_file_id, legend)
+
+    except ValueError:
+        await update.message.reply_text("Invalid message ID. Please provide a valid number.")
+    except Exception as e:
+        logger.error(f"Error in regen_command: {str(e)}")
+        await update.message.reply_text("An error occurred while processing your request. Please try again later.")
+    finally:
+        conn.close()
 
 def like_message(message_id) -> None:
     try:
