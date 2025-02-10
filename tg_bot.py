@@ -220,6 +220,10 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
                 "   - Ensure the prompt is clear, concise, and focused.\n",
                 "   - Use Stable Diffusion-friendly terminology and structure.\n",
                 "   - Balance faithfulness to the original photo with creative interpretation of the legend.\n",
+                "6. Give a title for the work you have done:\n"
+                "   - the title should explain in 5-10 words what is visible on the image.\n",
+                "   - the title will be used as the caption for the generated image.\n",
+                "   - try to be funny, but don't overthink it: you are a clown that can make serious people laugh!\n",
                 "Provide your output in the following format:\n",
                 "<analysis>\n",
                 "[Your analysis of the photo and legend]\n",
@@ -227,6 +231,9 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
                 "<stable_diffusion_prompt>\n",
                 "[Your generated Stable Diffusion prompt]\n",
                 "</stable_diffusion_prompt>\n",
+                "<title>\n",
+                "[Your generated Title for this work]\n",
+                "</title>\n",
                 "Remember to create a prompt that will result in a modified version of the original photo, incorporating elements from the legend while maintaining the essence of the original image."
             ]
 
@@ -259,6 +266,11 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
                 match = re.search(pattern, str(message.content[0]), re.DOTALL)
                 if match:
                     api_call_prompt = match.group(1).strip()
+
+                pattern = r'<title>(.*?)</title>'
+                match = re.search(pattern, str(message.content[0]), re.DOTALL)
+                if match:
+                    title = match.group(1).strip()
                 else:
                     raise ValueError("No stable_diffusion_prompt found in the content")
             except Exception as e:
@@ -284,7 +296,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
             # Send the processed image with buttons
             await update.message.reply_photo(
                 result_image,
-                caption=api_call_prompt.replace('\n', ''),
+                caption=title,
                 reply_markup=reply_markup
             )
         else:
