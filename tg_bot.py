@@ -319,6 +319,37 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "Sorry, something went wrong. Please try again later."
         )
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle incoming messages."""
+    if not update.message:
+        return
+
+    # Check if api online
+    is_online = await is_api_online()
+    if not is_online:
+        await update.message.reply_text(
+            "❌ API server is not online"
+        )
+        return
+
+    # Check if message contains an image
+    if not update.message.photo:
+        await update.message.reply_text(
+            "🖼️ Please send an image along with your text prompt!"
+        )
+        return
+
+    # Get the largest version of the photo
+    CURRENT_MESSAGE_ID = update.message.message_id
+    current_photo_file_id = update.message.photo[-1].file_id
+    current_legend = update.message.caption
+
+    # Save parameters in SQLite database with id set to message id
+    save_image_data(CURRENT_MESSAGE_ID, current_photo_file_id, current_legend)
+
+    # process image
+    process_image(update, context, current_photo_file_id, current_legend)
+
 
 def like_message(message_id) -> None:
     try:
