@@ -4,6 +4,9 @@ config.json
 .hugo_build.lock
 .packages/
 public/
+uploads/*
 content/*.org
 content/*.html
 static/img/*
+openapi*
+test_*
