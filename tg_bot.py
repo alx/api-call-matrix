@@ -319,6 +319,45 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "Sorry, something went wrong. Please try again later."
         )
 
+
+async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handler for the /like command. Add 1 to like counter based on the provided message ID.
+
+    Usage: /like <message_id>
+    """
+    try:
+        # Extract the message ID from the command arguments
+        message_id = int(context.args[0]) if context.args else None
+
+        if not message_id:
+            if CURRENT_MESSAGE_ID is not None:
+                message_id = CURRENT_MESSAGE_ID
+            else:
+                await update.message.reply_text("Please provide a valid message ID. Usage: /like <message_id>")
+                return
+
+        like_message(message_id)
+
+        # Fetch the updated like count
+        conn = sqlite3.connect('bot_data.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT likes FROM image_data WHERE message_id = ?', (message_id,))
+        result = cursor.fetchone()
+
+        if result:
+            likes = result[0]
+            await update.message.reply_text(f"👍 Like added! Total likes: {likes}")
+        else:
+            await update.message.reply_text(f"Message with ID {message_id} not found.")
+
+    except ValueError:
+        await update.message.reply_text("Please provide a valid message ID. Usage: /like <message_id>")
+    except Exception as e:
+        logger.error(f"Error in like_command: {str(e)}")
+        await update.message.reply_text("An error occurred while processing your request.")
+    finally:
+        conn.close()
 def main() -> None:
     """Start the bot."""
     # Create the Application
