@@ -272,7 +272,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
                 pattern = r'<title>(.*?)</title>'
                 match = re.search(pattern, str(message.content[0]), re.DOTALL)
                 if match:
-                    title = match.group(1).strip()
+                    caption_title = match.group(1).strip().replace('\n', '')
                 else:
                     raise ValueError("No stable_diffusion_prompt found in the content")
             except Exception as e:
@@ -301,7 +301,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file
             # Send the processed image with buttons
             await update.message.reply_photo(
                 result_image,
-                caption=title,
+                caption=caption_title,
                 reply_markup=reply_markup
             )
         else:
