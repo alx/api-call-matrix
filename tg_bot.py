@@ -175,30 +175,7 @@ async def process_image_with_api(image_data: bytes, prompt: str) -> Optional[byt
         logger.error(f"Error processing image with API: {e}")
         return None
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle incoming messages."""
-    if not update.message:
-        return
-
-    # Check if api online
-    is_online = await is_api_online()
-    if not is_online:
-        await update.message.reply_text(
-            "❌ API server is not online"
-        )
-        return
-
-    # Check if message contains an image
-    if not update.message.photo:
-        await update.message.reply_text(
-            "🖼️ Please send an image along with your text prompt!"
-        )
-        return
-
-    # Get the largest version of the photo
-    photo = update.message.photo[-1]
-    legend = update.message.caption
-
+async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE, file_id, legend) -> None:
     # Send "processing" message
     processing_msg = await update.message.reply_text(
         "📇 Processing your image... Please wait."
@@ -206,7 +183,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         # Download the photo
-        photo_file = await context.bot.get_file(photo.file_id)
+        photo_file = await context.bot.get_file(file_id)
         photo_bytes = await photo_file.download_as_bytearray()
 
         # interrogate the image
@@ -291,26 +268,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         else:
             api_call_prompt = f"{legend}, {interrogator_prompt}"
 
-        # Send "prompt" message, keep prompt_msg to delete it later
-        # prompt_msg = await update.message.reply_text(
-        #     f"📇 Processing your image using this prompt: {api_call_prompt}"
-        # )
-
         result_image = await process_image_with_api(photo_bytes, api_call_prompt)
         await processing_msg.delete()
 
-        # TODO read prompt from exif data
-        # exif_image = exif.Image(result_image)
-        # if exif_image.has_exif and "prompt" in dir(exif_image):
-        #     response_caption = exif_image['prompt']
-
-        # Delete the prompt message
-        # await prompt_msg.delete()
-
         if result_image:
+            # Create inline keyboard
+            keyboard = [
+                [
+                    InlineKeyboardButton("Regenerate", callback_data=f"regen:{file_id}:{legend}"),
+                    InlineKeyboardButton("Like", callback_data=f"like:{update.message.message_id}")
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            # Send the processed image with buttons
             await update.message.reply_photo(
                 result_image,
-                caption=api_call_prompt.replace('\n', '')
+                caption=api_call_prompt.replace('\n', ''),
+                reply_markup=reply_markup
             )
         else:
             await update.message.reply_text(
@@ -451,18 +426,41 @@ async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("An error occurred while processing your request.")
     finally:
         conn.close()
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data.split(':')
+    action = data[0]
+
+    if action == 'regen':
+        photo_file_id = data[1]
+        legend = data[2]
+
+        # process image
+        process_image(update, context, photo_file_id, legend)
+
+    elif action == 'like':
+        message_id = int(data[1])
+        like_message(message_id)
+
 def main() -> None:
     """Start the bot."""
     # Create the Application
     application = Application.builder().token(config["bot_token"]).build()
 
     # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("info", info))
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("info", info_command))
+    application.add_handler(CommandHandler("regen", regen_command))
+    application.add_handler(CommandHandler("like", like_command))
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
+    application.add_handler(CallbackQueryHandler(button_callback))
 
-    # Start the Bot
+    # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
