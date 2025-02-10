@@ -192,6 +192,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "4. Generate a Stable Diffusion prompt:\n",
                 "   - Start with a clear description of the main subject or scene from the original photo.\n",
                 "   - Replace the main subject by one or many pudgy penguins, or if not possible, include one pudgy penguin visual element.\n"
+                "   - DO NOT put bow tie on the  penguin.\n"
                 "   - Incorporate elements from the legend to guide the modification or enhancement of the image.\n",
                 "   - Use specific, descriptive language to convey the desired style, mood, and visual elements.\n",
                 "   - Include any relevant techniques, or references that align with the legend and original photo.\n",
