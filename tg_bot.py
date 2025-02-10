@@ -320,6 +320,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 
+def like_message(message_id) -> None:
+    try:
+        # Fetch the message from the database
+        conn = sqlite3.connect('bot_data.db')
+        cursor = conn.cursor()
+
+        # Add a like counter for each message
+        cursor.execute('''
+        UPDATE image_data
+        SET likes = likes + 1
+        WHERE message_id = ?
+        ''', (message_id,))
+
+        conn.commit()
+
+    except Exception as e:
+        logger.error(f"Error in like_message: {str(e)}")
+    finally:
+        conn.close()
+
 async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handler for the /like command. Add 1 to like counter based on the provided message ID.
