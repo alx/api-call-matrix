@@ -62,6 +62,25 @@ def setup_database():
     conn.close()
 
 setup_database()
+
+def save_image_data(message_id: int, photo_file_id: str, legend: Optional[str]):
+    """
+    Save image data to the SQLite database.
+
+    Args:
+        message_id (int): The Telegram message ID.
+        photo_file_id (str): The file ID of the photo.
+        legend (Optional[str]): The caption of the photo, if any.
+    """
+    conn = sqlite3.connect('bot_data.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+    INSERT INTO image_data (message_id, photo_file_id, legend)
+    VALUES (?, ?, ?)
+    ''', (message_id, photo_file_id, legend))
+    conn.commit()
+    conn.close()
+
 async def is_api_online() -> bool:
     try:
         async with ClientSession() as session:
