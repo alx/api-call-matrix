@@ -448,6 +448,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
 
+    logger.info(f"handle_callback: {query.data}")
     data = query.data.split(':')
     action = data[0]
     row_id = int(data[1])
